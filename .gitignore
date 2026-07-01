@@ -1,0 +1,42 @@
+# Godot 4 generated files
+.godot/
+.import/
+
+# Exported binaries
+export/
+builds/
+*.apk
+*.aab
+*.ipa
+*.exe
+*.x86_64
+*.dmg
+
+# Godot export templates
+export_presets.cfg
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# VS Code
+.vscode/
+
+# JetBrains / Rider
+.idea/
+*.iml
+
+# Environment / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Asset source files (keep only imported versions in repo)
+assets/raw/
+
+# Build artifacts
+dist/
