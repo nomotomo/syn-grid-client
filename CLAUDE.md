@@ -137,7 +137,7 @@ The client must present the same semantics the server computes.
 |---|---|---|
 | C1 | Repo setup, project.godot, autoload skeletons, ApiClient base | Complete |
 | C2 | ApiClient - all 13 RPCs wired to real gateway routes, E2E tested | Complete |
-| C3 | MainMenu + GameState hydration | Pending |
+| C3 | MainMenu + GameState hydration | Complete |
 | C4 | ShopScene - card roll pop, drag tilt, buy/sell flow | Pending |
 | C5 | GridPrepScene - drag-drop placement, synergy glow shader, ValidateGrid call | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Pending |
@@ -157,6 +157,10 @@ godot --headless --quit
 
 # API E2E test (requires live server: `make run` in ../sync-grid with DATABASE_URL set)
 godot --headless --path . tests/ApiE2E.tscn
+
+# Screenshot harnesses (offline injects fake responses; SYNGRID_LIVE=1 uses the real server)
+SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/main_menu/MainMenuPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/grid_prep/GridPrepPreviewHarness.tscn
 
 # Export Android debug APK (requires export templates installed)
 godot --headless --export-debug "Android" export/syn-grid-debug.apk

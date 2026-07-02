@@ -18,7 +18,7 @@ config/name="Syn-Grid"
 config/description="Asymmetric asynchronous inventory management auto-battler"
 config/version="0.1.0"
 config/tags=PackedStringArray("mobile", "strategy", "auto-battler")
-run/main_scene="res://scenes/grid_prep/GridPrepPreviewHarness.tscn"
+run/main_scene="res://scenes/main_menu/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://assets/sprites/ui/icon.svg"
 

@@ -24,6 +24,7 @@ const LABEL_VARIATIONS: Dictionary = {
 	"CaptionLabel":   [12, SynGridPalette.TEXT_DIM],
 	"HudTitleLabel":  [12, SynGridPalette.TEXT_DIM],
 	"HudValueLabel":  [28, SynGridPalette.TEXT_PRIMARY],
+	"TitleLabel":     [72, SynGridPalette.TEXT_PRIMARY],
 }
 
 static var _cached_theme: Theme = null
@@ -70,9 +71,19 @@ static func _build_theme() -> Theme:
 		build_panel_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_ELEVATED))
 	theme.set_stylebox("pressed", "Button",
 		build_panel_style(SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED))
+	theme.set_stylebox("disabled", "Button",
+		build_panel_style(Color(0.30, 0.32, 0.35, 0.4), SynGridPalette.PANEL_BG))
 	theme.set_color("font_color", "Button", SynGridPalette.TEXT_PRIMARY)
 	theme.set_color("font_hover_color", "Button", SynGridPalette.TEXT_PRIMARY)
 	theme.set_color("font_pressed_color", "Button", SynGridPalette.TEXT_PRIMARY)
+	theme.set_color("font_disabled_color", "Button", SynGridPalette.TEXT_DIM)
+
+	theme.set_stylebox("normal", "LineEdit",
+		build_panel_style(SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG))
+	theme.set_stylebox("focus", "LineEdit",
+		build_panel_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG))
+	theme.set_color("font_color", "LineEdit", SynGridPalette.TEXT_PRIMARY)
+	theme.set_color("caret_color", "LineEdit", SynGridPalette.ACCENT_TEAL)
 
 	theme.set_color("font_color", "Label", SynGridPalette.TEXT_PRIMARY)
 
