@@ -9,7 +9,7 @@ extends Control
 # tween. No game logic lives here - all values render straight from server
 # responses.
 
-const SHOP_SCENE_PATH: String = "res://scenes/shop/ShopScene.tscn"
+const PREP_SCENE_PATH: String = "res://scenes/grid_prep/GridPrepScene.tscn"
 
 # Entry cascade (contract section 2 card-pop rhythm, applied to bento panels).
 @export var entry_pop_duration: float = 0.12
@@ -235,7 +235,7 @@ func _on_play_pressed() -> void:
 		_begin_session()
 		return
 	await _pulse(_play_button).finished
-	get_tree().change_scene_to_file(SHOP_SCENE_PATH)
+	get_tree().change_scene_to_file(PREP_SCENE_PATH)
 
 # -- Juice helpers (contract section 2) --
 

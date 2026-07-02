@@ -23,6 +23,20 @@ offset_top = 32.0
 offset_right = -40.0
 offset_bottom = 148.0
 
+[node name="ShopCaption" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"CaptionLabel"
+text = "REQUISITION"
+
+[node name="ShopPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+
+[node name="ShopRow" type="HBoxContainer" parent="ShopPanel"]
+unique_name_in_owner = true
+alignment = 1
+theme_override_constants/separation = 20
+
 [node name="GridCaption" type="Label" parent="."]
 unique_name_in_owner = true
 mouse_filter = 2
@@ -57,6 +71,23 @@ text = "BENCH"
 unique_name_in_owner = true
 theme_override_constants/separation = 16
 
+[node name="RecyclerPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="RecyclerLabel" type="Label" parent="RecyclerPanel"]
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "RECYCLER - DRAG A BENCH ITEM HERE TO SELL"
+
+[node name="StartMatchButton" type="Button" parent="."]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 32
+disabled = true
+text = "START MATCH - SOON"
+
 [node name="DragLayer" type="Control" parent="."]
 unique_name_in_owner = true
 mouse_filter = 2
@@ -73,11 +104,11 @@ horizontal_alignment = 1
 vertical_alignment = 1
 text = ""
 
-[node name="BackToShopButton" type="Button" parent="."]
+[node name="HubButton" type="Button" parent="."]
 unique_name_in_owner = true
 anchor_left = 0.02
 anchor_top = 0.925
 anchor_right = 0.16
 anchor_bottom = 0.975
 theme_override_font_sizes/font_size = 16
-text = "< SHOP"
+text = "< HUB"

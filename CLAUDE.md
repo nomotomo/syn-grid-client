@@ -63,8 +63,7 @@ sync-grid-client/
 │   └── Project_Syn_Grid_Juice_Aesthetic_Spec.pdf
 ├── scenes/
 │   ├── main_menu/              # MainMenu.tscn + MainMenu.gd
-│   ├── shop/                   # ShopScene.tscn + ShopScene.gd
-│   ├── grid_prep/              # GridPrepScene.tscn + GridPrepScene.gd
+│   ├── grid_prep/              # GridPrepScene.tscn - merged prep screen (shop + grid placement)
 │   ├── combat_replay/          # CombatReplayScene.tscn + CombatReplayScene.gd
 │   ├── round_end/              # RoundEndScene.tscn + RoundEndScene.gd
 │   └── leaderboard/            # LeaderboardScene.tscn + LeaderboardScene.gd
@@ -138,8 +137,8 @@ The client must present the same semantics the server computes.
 | C1 | Repo setup, project.godot, autoload skeletons, ApiClient base | Complete |
 | C2 | ApiClient - all 13 RPCs wired to real gateway routes, E2E tested | Complete |
 | C3 | MainMenu + GameState hydration | Complete |
-| C4 | ShopScene - card roll pop, drag tilt, buy/sell flow | Complete |
-| C5 | GridPrepScene - drag-drop placement, synergy glow shader, ValidateGrid call | Complete |
+| C4 | Shop flow - roll pop, buy/sell, triple-merge (merged into GridPrepScene) | Complete |
+| C5 | GridPrepScene - single prep screen: shop row + drag-drop placement + synergy glow | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Pending |
 | C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Pending |
 | C8 | LeaderboardScene + SeasonScene | Pending |
