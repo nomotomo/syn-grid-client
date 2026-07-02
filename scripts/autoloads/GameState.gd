@@ -30,6 +30,10 @@ var bench_items: Array[Dictionary] = []
 var current_shop_slots: Array[Dictionary] = []
 var shop_round: int = 0
 
+# Highest round whose start-of-round gold grant has been claimed. AwardRoundGold
+# credits on every call, so the client claims it exactly once per round.
+var gold_awarded_round: int = 0
+
 # Last combat result (used by CombatReplayScene and RoundEndScene)
 var last_combat_log: Dictionary = {}
 var last_fight_won: bool = false

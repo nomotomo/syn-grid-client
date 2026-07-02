@@ -1,0 +1,118 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/shop/ShopScene.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
+
+[node name="ShopScene" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.1, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 24
+
+[node name="StatsHud" parent="Margin/Layout" instance=ExtResource("2")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 116)
+
+[node name="HeaderRow" type="HBoxContainer" parent="Margin/Layout"]
+theme_override_constants/separation = 16
+
+[node name="HubButton" type="Button" parent="Margin/Layout/HeaderRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 56)
+theme_override_font_sizes/font_size = 16
+text = "< HUB"
+
+[node name="ShopCaption" type="Label" parent="Margin/Layout/HeaderRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "REQUISITION"
+
+[node name="HeaderSpacer" type="Control" parent="Margin/Layout/HeaderRow"]
+custom_minimum_size = Vector2(150, 0)
+mouse_filter = 2
+
+[node name="ShopPanel" type="PanelContainer" parent="Margin/Layout"]
+
+[node name="ShopVBox" type="VBoxContainer" parent="Margin/Layout/ShopPanel"]
+theme_override_constants/separation = 12
+
+[node name="ShopRow" type="HBoxContainer" parent="Margin/Layout/ShopPanel/ShopVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 170)
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="ShopHint" type="Label" parent="Margin/Layout/ShopPanel/ShopVBox"]
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = "TAP AN ITEM TO REQUISITION IT"
+
+[node name="BenchCaption" type="Label" parent="Margin/Layout"]
+theme_type_variation = &"CaptionLabel"
+text = "BENCH"
+
+[node name="BenchPanel" type="PanelContainer" parent="Margin/Layout"]
+custom_minimum_size = Vector2(0, 200)
+
+[node name="BenchScroll" type="ScrollContainer" parent="Margin/Layout/BenchPanel"]
+horizontal_scroll_mode = 1
+vertical_scroll_mode = 0
+
+[node name="BenchRow" type="HBoxContainer" parent="Margin/Layout/BenchPanel/BenchScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="RecyclerPanel" type="PanelContainer" parent="Margin/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 110)
+
+[node name="RecyclerLabel" type="Label" parent="Margin/Layout/RecyclerPanel"]
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "RECYCLER - DRAG AN ITEM HERE TO SELL"
+
+[node name="Spacer" type="Control" parent="Margin/Layout"]
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="DeployButton" type="Button" parent="Margin/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 140)
+theme_override_font_sizes/font_size = 32
+text = "DEPLOY TO GRID"
+
+[node name="StatusLabel" type="Label" parent="Margin/Layout"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = ""
+
+[node name="DragLayer" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0

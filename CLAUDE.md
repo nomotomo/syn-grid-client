@@ -138,7 +138,7 @@ The client must present the same semantics the server computes.
 | C1 | Repo setup, project.godot, autoload skeletons, ApiClient base | Complete |
 | C2 | ApiClient - all 13 RPCs wired to real gateway routes, E2E tested | Complete |
 | C3 | MainMenu + GameState hydration | Complete |
-| C4 | ShopScene - card roll pop, drag tilt, buy/sell flow | Pending |
+| C4 | ShopScene - card roll pop, drag tilt, buy/sell flow | Complete |
 | C5 | GridPrepScene - drag-drop placement, synergy glow shader, ValidateGrid call | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Pending |
 | C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Pending |

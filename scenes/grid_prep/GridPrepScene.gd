@@ -8,6 +8,7 @@ extends Control
 
 const ITEM_CARD_SCENE: PackedScene = preload("res://scenes/ui/ItemCard.tscn")
 const SYNERGY_BORDER_SCENE: PackedScene = preload("res://scenes/ui/SynergyBorder.tscn")
+const SHOP_SCENE_PATH: String = "res://scenes/shop/ShopScene.tscn"
 
 @export var cell_size: Vector2 = Vector2(150, 150)
 @export var grid_columns: int = 4
@@ -30,6 +31,7 @@ const SYNERGY_BORDER_SCENE: PackedScene = preload("res://scenes/ui/SynergyBorder
 @onready var _bench_row: HBoxContainer = %BenchRow
 @onready var _drag_layer: Control = %DragLayer
 @onready var _status_label: Label = %StatusLabel
+@onready var _back_to_shop_button: Button = %BackToShopButton
 
 var _cells: Array[GridCell] = []
 var _cards_by_item_id: Dictionary = {}
@@ -49,6 +51,8 @@ func _ready() -> void:
 	_stats_hud.refresh()
 	ApiClient.validate_grid_completed.connect(_on_validate_grid_completed)
 	ApiClient.validate_grid_failed.connect(_on_validate_grid_failed)
+	_back_to_shop_button.pressed.connect(
+		func() -> void: get_tree().change_scene_to_file(SHOP_SCENE_PATH))
 	AudioManager.play_prep_bgm()
 
 # Cells are sized card + panel margins so occupied and empty cells stay the

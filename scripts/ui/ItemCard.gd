@@ -14,6 +14,9 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 
 @export var card_size: Vector2 = Vector2(150, 150)
 
+# Shop slots are tap-to-buy and must never enter the drag lifecycle.
+@export var draggable: bool = true
+
 # Card pop (juice_manual.md section 2 - play_card_pop reference implementation).
 @export var card_pop_duration: float = 0.12
 @export var card_pop_settle_duration: float = 0.06
@@ -118,7 +121,7 @@ func _gui_input(event: InputEvent) -> void:
 				card_pressed.emit(_item_data)
 			_dragging = false
 	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
-		if not _dragging and event.global_position.distance_to(_press_start_pos) > drag_threshold_px:
+		if not _dragging and draggable and event.global_position.distance_to(_press_start_pos) > drag_threshold_px:
 			_begin_drag()
 		if _dragging:
 			rotation = clamp(event.relative.x * drag_tilt_scale, -drag_tilt_max, drag_tilt_max)
