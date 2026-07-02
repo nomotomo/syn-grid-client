@@ -136,10 +136,10 @@ The client must present the same semantics the server computes.
 | Phase | Description | Status |
 |---|---|---|
 | C1 | Repo setup, project.godot, autoload skeletons, ApiClient base | Complete |
-| C2 | ApiClient - all 10 RPCs wired, signal emissions, error handling | Pending |
+| C2 | ApiClient - all 13 RPCs wired to real gateway routes, E2E tested | Complete |
 | C3 | MainMenu + GameState hydration | Pending |
 | C4 | ShopScene - card roll pop, drag tilt, buy/sell flow | Pending |
-| C5 | GridPrepScene - drag-drop placement, synergy glow shader, ValidateGrid call | Pending |
+| C5 | GridPrepScene - drag-drop placement, synergy glow shader, ValidateGrid call | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Pending |
 | C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Pending |
 | C8 | LeaderboardScene + SeasonScene | Pending |
@@ -154,6 +154,9 @@ open -a "Godot 4" .
 
 # Headless test run (CI)
 godot --headless --quit
+
+# API E2E test (requires live server: `make run` in ../sync-grid with DATABASE_URL set)
+godot --headless --path . tests/ApiE2E.tscn
 
 # Export Android debug APK (requires export templates installed)
 godot --headless --export-debug "Android" export/syn-grid-debug.apk
