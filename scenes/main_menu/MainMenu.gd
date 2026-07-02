@@ -64,6 +64,8 @@ func _ready() -> void:
 
 	ApiClient.authenticate_completed.connect(_on_authenticate_completed)
 	ApiClient.authenticate_failed.connect(_on_authenticate_failed)
+	ApiClient.get_active_grid_completed.connect(_on_get_active_grid_completed)
+	ApiClient.get_active_grid_failed.connect(_on_get_active_grid_failed)
 	ApiClient.get_profile_completed.connect(_on_get_profile_completed)
 	ApiClient.get_profile_failed.connect(_on_get_profile_failed)
 	ApiClient.get_active_season_completed.connect(_on_get_active_season_completed)
@@ -98,12 +100,34 @@ func _on_authenticate_completed(data: Dictionary) -> void:
 	_authenticated = true
 	_stats_hud.refresh()
 	_refresh_identity()
-	_set_status("LINK ESTABLISHED")
+	_set_status("SYNCING RUN STATE...")
+	_play_button.disabled = true
+	_play_button.text = "SYNCING..."
+	ApiClient.get_active_grid()
+	ApiClient.get_profile()
+	ApiClient.get_active_season()
+
+func _on_get_active_grid_completed(data: Dictionary) -> void:
+	GameState.hydrate_from_grid(data.get("grid", {}))
+	_stats_hud.refresh()
+	_refresh_identity()
+	if GameState.current_round > 1:
+		_set_status("RUN RESUMED - ROUND %d" % GameState.current_round)
+	else:
+		_set_status("LINK ESTABLISHED")
+	_enable_play()
+
+func _on_get_active_grid_failed(code: int, _reason: String) -> void:
+	if code == 404:
+		_set_status("LINK ESTABLISHED")
+	else:
+		_set_status("STATE SYNC OFFLINE")
+	_enable_play()
+
+func _enable_play() -> void:
 	_play_button.disabled = false
 	_play_button.text = "ENTER THE GRID"
 	_play_panel_pop(_play_button, 0)
-	ApiClient.get_profile()
-	ApiClient.get_active_season()
 
 func _on_authenticate_failed(code: int, reason: String) -> void:
 	_authenticated = false

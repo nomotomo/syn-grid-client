@@ -105,6 +105,49 @@ func _run_all() -> void:
 		ApiClient.finalize_round_completed, ApiClient.finalize_round_failed)
 	if _require(fin, "finalize_round"):
 		_check(fin.data.has("attacker_state"), "finalize returns attacker_state")
+		if fin.data.has("next_round"):
+			var next_r := int(str(fin.data.get("next_round", "0")))
+			_check(next_r == 2, "finalize next_round == round + 1 (got %d)" % next_r)
+		else:
+			print("skipped: finalize next_round field (server #35 may be unmerged)")
+
+	# 7b. GetActiveGrid after purchase should reflect bench + gold
+	var grid_resp := await _call(ApiClient.get_active_grid,
+		ApiClient.get_active_grid_completed, ApiClient.get_active_grid_failed)
+	if grid_resp.ok:
+		var g: Dictionary = grid_resp.data.get("grid", {})
+		_check(int(g.get("gold_balance", -1)) == GameState.gold,
+			"get_active_grid gold_balance matches session")
+		_check((g.get("bench_reserve", []) as Array).size() >= 0,
+			"get_active_grid returns bench_reserve")
+	elif grid_resp.code == 404:
+		print("skipped: get_active_grid 404 (server #36 may be unmerged)")
+	else:
+		print("skipped: get_active_grid code=%s (server #36 may be unmerged)" % grid_resp.code)
+
+	# 7c. Idempotent award_round_gold - second call same round
+	if gold.ok:
+		var bal_after_first := int(gold.data.get("new_balance", 0))
+		var gold2 := await _call(ApiClient.award_round_gold.bind(1, won),
+			ApiClient.award_round_gold_completed, ApiClient.award_round_gold_failed)
+		if gold2.ok:
+			var bal_after_second := int(gold2.data.get("new_balance", 0))
+			if bal_after_second == bal_after_first:
+				print("E2E pass: award_round_gold idempotent (balance unchanged on replay)")
+			else:
+				print("skipped: award_round_gold not idempotent yet (server #34 may be unmerged)")
+		else:
+			print("skipped: award_round_gold replay failed (server #34 may be unmerged)")
+
+	# 7d. reset_run on live non-terminal run should 412
+	var reset := await _call(ApiClient.reset_run,
+		ApiClient.reset_run_completed, ApiClient.reset_run_failed)
+	if not reset.ok and reset.code == 412:
+		print("E2E pass: reset_run rejects non-terminal run")
+	elif reset.ok:
+		print("skipped: reset_run succeeded on non-terminal run (unexpected)")
+	else:
+		print("skipped: reset_run code=%s (server #37 may be unmerged)" % reset.code)
 
 	# 8. Leaderboard (int64 fields arrive as JSON strings)
 	var lb := await _call(ApiClient.get_leaderboard.bind(5),

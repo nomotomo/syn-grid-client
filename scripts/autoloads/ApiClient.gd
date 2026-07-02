@@ -46,6 +46,12 @@ signal get_profile_failed(code: int, reason: String)
 signal get_match_history_completed(data: Dictionary)
 signal get_match_history_failed(code: int, reason: String)
 
+signal get_active_grid_completed(data: Dictionary)
+signal get_active_grid_failed(code: int, reason: String)
+
+signal reset_run_completed(data: Dictionary)
+signal reset_run_failed(code: int, reason: String)
+
 # -- Public API --
 # Callers invoke these methods. They never await return values.
 # Connect to the corresponding signals to handle responses.
@@ -114,6 +120,14 @@ func get_profile(player_id: String = "") -> void:
 func get_match_history(top_n: int = 20) -> void:
 	_request(HTTPClient.METHOD_GET, "/v1/me/history", {}, {"top_n": top_n}, true,
 		get_match_history_completed, get_match_history_failed)
+
+func get_active_grid() -> void:
+	_request(HTTPClient.METHOD_GET, "/v1/me/grid", {}, {}, true,
+		get_active_grid_completed, get_active_grid_failed)
+
+func reset_run() -> void:
+	_request(HTTPClient.METHOD_POST, "/v1/run/reset", {}, {}, true,
+		reset_run_completed, reset_run_failed)
 
 # -- Internal --
 

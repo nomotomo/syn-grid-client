@@ -38,6 +38,10 @@ var gold_awarded_round: int = 0
 var last_combat_log: Dictionary = {}
 var last_fight_won: bool = false
 
+# Written by CombatReplayScene when FinalizeRound completes; read by RoundEndScene.
+# Shape: { won, round_played, next_round, my_state, gold_rewarded }
+var last_round_result: Dictionary = {}
+
 # Opponent ghost's public board from StartMatchResponse (equipped items only)
 var opponent_grid: Dictionary = {}
 
@@ -83,6 +87,45 @@ func reset_for_new_round() -> void:
 		bench_items.append(item)
 	equipped_items.clear()
 	last_combat_log = {}
+
+# Full session rehydration from GetActiveGridResponse.grid or ResetRunResponse.grid.
+# current_round is assigned only here (and in apply_round_result) - never += 1 elsewhere.
+func hydrate_from_grid(grid: Dictionary) -> void:
+	var new_round := int(grid.get("current_round", current_round))
+	life_points = int(grid.get("life_points", life_points))
+	triumph_count = int(grid.get("triumph_count", triumph_count))
+	gold = int(grid.get("gold_balance", gold))
+	current_round = new_round
+	var equipped: Array = grid.get("equipped_items", [])
+	var bench: Array = grid.get("bench_reserve", [])
+	equipped_items.assign(equipped)
+	bench_items.assign(bench)
+	if shop_round != new_round:
+		current_shop_slots.clear()
+		shop_round = 0
+
+func apply_round_result(finalize_response: Dictionary, won: bool, round_played: int) -> void:
+	var my_state := _my_player_state(finalize_response)
+	life_points = int(my_state.get("life_points", life_points))
+	triumph_count = int(my_state.get("triumph_count", triumph_count))
+	var next_round := int(str(finalize_response.get("next_round", str(round_played + 1))))
+	current_round = next_round
+	last_round_result = {
+		"won": won,
+		"round_played": round_played,
+		"next_round": next_round,
+		"my_state": my_state,
+		"gold_rewarded": int(finalize_response.get("gold_rewarded", 0)),
+	}
+
+func _my_player_state(finalize_response: Dictionary) -> Dictionary:
+	var attacker: Dictionary = finalize_response.get("attacker_state", {})
+	var defender: Dictionary = finalize_response.get("defender_state", {})
+	if String(attacker.get("player_id", "")) == player_id:
+		return attacker
+	if String(defender.get("player_id", "")) == player_id:
+		return defender
+	return attacker if not attacker.is_empty() else defender
 
 func sync_bench_from_server(server_bench: Array) -> void:
 	# Server bench is authoritative, but exclude items already placed locally.

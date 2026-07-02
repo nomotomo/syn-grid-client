@@ -144,7 +144,14 @@ func _auto_place(bench_idx: int, cell_coords: Vector2i) -> void:
 	_grid._on_card_drag_ended(card, cell.get_global_rect().get_center())
 
 func _save_and_quit(screenshot_path: String) -> void:
-	var image := get_viewport().get_texture().get_image()
-	image.save_png(screenshot_path)
-	print("auto-verify: screenshot saved to ", screenshot_path)
+	var tex := get_viewport().get_texture()
+	if tex != null:
+		var image := tex.get_image()
+		if image != null:
+			image.save_png(screenshot_path)
+			print("auto-verify: screenshot saved to ", screenshot_path)
+		else:
+			print("auto-verify: no image buffer (headless) - skipping screenshot")
+	else:
+		print("auto-verify: no viewport texture (headless) - skipping screenshot")
 	get_tree().quit()

@@ -16,7 +16,8 @@ You operate via the CLI. You own the system architecture, design patterns, docum
 4. **Asynchronous Code Review:** When asked to review code, read the changed files in the git staging area or specific feature directories. Evaluate them against docs/low-level-design/ and provide a concrete "Pass/Fail" checklist with required structural corrections.
 5. **Testing** Add proper testing guidelines in (`docs/testing/`). How unit tests should integrated and how load, volume and end-to-end testing should be achieved.
 6. **Deployment & CI/CD** Decide on deployments and CI/CD pipeline.
-7 **Guardrail Coding:** If asked to write code, provide ONLY high-level skeletal interfaces, abstractions, or mock test definitions. Leave full implementation to Cursor.
+7  **Guardrail Coding:** If asked to write code, provide ONLY high-level skeletal interfaces, abstractions, or mock test definitions. Leave full implementation to Cursor.
+8  **Server Lags & Drift Escalation (Backend Sync):** If you discover that a required client feature (e.g., a specific shop layout mutation, new item trait, or economy rule) is missing or unsupported by the Go backend server code at `../sync-grid`, you must immediately halt feature progression. Generate a comprehensive, highly technical file or local GitHub Issue detailing the exact data structures, database mutations, and API endpoints needed on the Go backend so that a Cursor Agent can step into the backend repository and implement them immediately.
 
 ---
 
@@ -199,7 +200,7 @@ The client must present the same semantics the server computes.
 | C4 | Shop flow - roll pop, buy/sell, triple-merge (merged into GridPrepScene) | Complete |
 | C5 | GridPrepScene - single prep screen: shop row + drag-drop placement + synergy glow | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Complete |
-| C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Pending |
+| C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Complete |
 | C8 | LeaderboardScene + SeasonScene | Pending |
 | C9 | AudioManager - BGM cross-fade, full SFX event matrix | Pending |
 | C10 | Android export, release build pipeline | Pending |
@@ -219,6 +220,11 @@ godot --headless --path . tests/ApiE2E.tscn
 # Screenshot harnesses (offline injects fake responses; SYNGRID_LIVE=1 uses the real server)
 SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/main_menu/MainMenuPreviewHarness.tscn
 SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/grid_prep/GridPrepPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/combat_replay/CombatReplayPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=win godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=loss godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=dead godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=victory godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
 
 # Export Android debug APK (requires export templates installed)
 godot --headless --export-debug "Android" export/syn-grid-debug.apk

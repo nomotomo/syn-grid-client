@@ -13,6 +13,7 @@ extends Control
 # along Y toward the enemy - the same "velocity clash" read.
 
 const PREP_SCENE_PATH: String = "res://scenes/grid_prep/GridPrepScene.tscn"
+const ROUND_END_SCENE_PATH: String = "res://scenes/round_end/RoundEndScene.tscn"
 const ITEM_CARD_SCENE: PackedScene = preload("res://scenes/ui/ItemCard.tscn")
 const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 
@@ -53,6 +54,9 @@ var _items_by_id: Dictionary = {}        # item_id -> item Dictionary
 var _side_by_item_id: Dictionary = {}    # item_id -> "player" | "opponent"
 var _bars_by_player_id: Dictionary = {}  # player_id -> HpBar
 var _result_shown: bool = false
+var _round_played: int = 0
+var _fight_won: bool = false
+var _finalize_synced: bool = false
 
 func _ready() -> void:
 	theme = ThemeBuilder.get_theme()
@@ -88,8 +92,12 @@ func _ready() -> void:
 	_log_player.event_played.connect(_on_event_played)
 	_log_player.playback_finished.connect(_on_playback_finished)
 	_skip_button.pressed.connect(_skip_to_result)
-	_continue_button.pressed.connect(
-		func() -> void: get_tree().change_scene_to_file(PREP_SCENE_PATH))
+	_continue_button.disabled = true
+	_continue_button.text = "SYNCING..."
+	_continue_button.pressed.connect(_on_continue_pressed)
+
+	ApiClient.finalize_round_completed.connect(_on_finalize_round_completed)
+	ApiClient.finalize_round_failed.connect(_on_finalize_round_failed)
 
 	# StartMatch response received -> combat track (contract section 5).
 	AudioManager.play_combat_bgm()
@@ -308,6 +316,9 @@ func _show_result(winner_id: String) -> void:
 	_result_banner.add_theme_color_override("font_color",
 		SynGridPalette.ACCENT_TEAL if won else SynGridPalette.DANGER)
 	_result_overlay.visible = true
+	_round_played = GameState.current_round
+	_fight_won = won
+	_begin_finalize_round()
 	for node: Control in [_result_banner, _continue_button]:
 		node.pivot_offset = node.size / 2.0
 		node.scale = Vector2.ZERO
@@ -320,3 +331,72 @@ func _show_result(winner_id: String) -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	tw.tween_property(_continue_button, "scale", Vector2.ONE, 0.06) \
 		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+
+func _begin_finalize_round() -> void:
+	var log: Dictionary = GameState.last_combat_log
+	ApiClient.finalize_round(
+		String(log.get("attacker_id", GameState.player_id)),
+		String(log.get("defender_id", "")),
+		String(log.get("winner_id", "")),
+		_round_played)
+
+func _on_finalize_round_completed(data: Dictionary) -> void:
+	GameState.apply_round_result(data, _fight_won, _round_played)
+	_finalize_synced = true
+	_continue_button.disabled = false
+	_continue_button.text = "CONTINUE"
+
+func _on_finalize_round_failed(code: int, reason: String) -> void:
+	var upper := reason.to_upper()
+	if code in [409, 412] and ("RESOLVED" in upper or "ALREADY" in upper):
+		_set_finalize_status("RECOVERING STATE...")
+		ApiClient.get_active_grid_completed.connect(_on_recover_grid_completed, CONNECT_ONE_SHOT)
+		ApiClient.get_active_grid_failed.connect(_on_recover_grid_failed, CONNECT_ONE_SHOT)
+		ApiClient.get_active_grid()
+		return
+	if code == 412 and ("NOT_STARTED" in upper or "MATCH" in upper):
+		_set_finalize_status("MATCH STATE LOST - REFIGHT")
+		_continue_button.disabled = false
+		_continue_button.text = "BACK TO PREP"
+		_finalize_synced = true
+		return
+	_set_finalize_status("SYNC FAILED - %s" % reason)
+	_continue_button.disabled = false
+	_continue_button.text = "RETRY SYNC"
+
+func _on_recover_grid_completed(data: Dictionary) -> void:
+	GameState.hydrate_from_grid(data.get("grid", {}))
+	_finalize_synced = true
+	_continue_button.disabled = false
+	_continue_button.text = "BACK TO PREP"
+
+func _on_recover_grid_failed(_code: int, reason: String) -> void:
+	_set_finalize_status("RECOVERY FAILED - %s" % reason)
+	_continue_button.disabled = false
+	_continue_button.text = "BACK TO PREP"
+	_finalize_synced = true
+
+func _on_continue_pressed() -> void:
+	if _continue_button.text == "RETRY SYNC":
+		_continue_button.disabled = true
+		_continue_button.text = "SYNCING..."
+		_begin_finalize_round()
+		return
+	await _pulse(_continue_button).finished
+	if _continue_button.text == "BACK TO PREP":
+		get_tree().change_scene_to_file(PREP_SCENE_PATH)
+		return
+	if _finalize_synced:
+		get_tree().change_scene_to_file(ROUND_END_SCENE_PATH)
+
+func _set_finalize_status(text: String) -> void:
+	_tick_label.text = text
+
+func _pulse(control: Control) -> Tween:
+	control.pivot_offset = control.size / 2.0
+	var tw := create_tween()
+	tw.tween_property(control, "scale", Vector2(0.94, 0.94), 0.05) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(control, "scale", Vector2.ONE, 0.10) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	return tw
