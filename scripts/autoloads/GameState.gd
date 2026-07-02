@@ -1,4 +1,3 @@
-class_name GameState
 extends Node
 
 # Session identity
@@ -44,3 +43,17 @@ func sync_bench_from_server(server_bench: Array) -> void:
 	for it in server_bench:
 		if not placed_ids.has(it.get("item_id", "")):
 			bench_items.append(it)
+
+# Packages current session state into the Grid JSON shape docs/api_contract.md
+# expects for validate_grid / start_match. Pure data-shaping, no game logic.
+func to_grid_payload(columns: int, rows: int) -> Dictionary:
+	return {
+		"player_id": player_id,
+		"current_round": current_round,
+		"life_points": life_points,
+		"triumph_count": triumph_count,
+		"gold_balance": gold,
+		"grid_dimensions": {"columns": columns, "rows": rows},
+		"equipped_items": equipped_items,
+		"bench_reserve": bench_items,
+	}

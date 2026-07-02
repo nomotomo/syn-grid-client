@@ -1,4 +1,3 @@
-class_name ApiClient
 extends Node
 
 # Configure via ProjectSettings or override in .env equivalent.

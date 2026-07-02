@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/SynergyBorder.gd" id="1"]
+[ext_resource type="Shader" path="res://assets/shaders/synergy_glow.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="1"]
+resource_local_to_scene = true
+shader = ExtResource("2")
+
+[node name="SynergyBorder" type="ColorRect"]
+mouse_filter = 2
+material = SubResource("1")
+script = ExtResource("1")

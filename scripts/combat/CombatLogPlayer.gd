@@ -8,6 +8,9 @@ signal playback_finished(winner_id: String, attacker_hp: float, defender_hp: flo
 
 @export var tick_interval: float = 0.10
 @export var hitstop_frames: int = 2
+# Contract section 4: 10 events/s normally, 5 events/s during crits so the
+# hit-stop registers. The gap after a crit event is tick_interval * this.
+@export var crit_tick_multiplier: float = 2.0
 
 var _queue: Array[Dictionary] = []
 var _combat_log: Dictionary = {}
@@ -43,8 +46,12 @@ func _dequeue_next() -> void:
 	var ev: Dictionary = _queue.pop_front()
 	event_played.emit(ev)
 	if ev.get("crit", false):
-		# Hit-stop: pause queue for hitstop_frames frames (juice contract).
+		# Hit-stop: pause queue for hitstop_frames frames (juice contract),
+		# then leave a double-length gap before the next event.
 		_timer.stop()
 		for _i in hitstop_frames:
 			await get_tree().process_frame
-		_timer.start()
+		_timer.start(tick_interval * crit_tick_multiplier)
+	elif not is_equal_approx(_timer.wait_time, tick_interval):
+		# Restore the normal cadence after a crit-stretched gap.
+		_timer.start(tick_interval)
