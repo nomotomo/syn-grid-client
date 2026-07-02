@@ -210,12 +210,20 @@ Response:
     ],
     "attacker_hp_final": 725.0,
     "defender_hp_final": 0.0
+  },
+  "opponent_grid": {
+    "player_id": "ghost-player-uuid",
+    "grid_dimensions": { "columns": 4, "rows": 4 },
+    "equipped_items": [ ...Item objects with placement_coords... ]
   }
 }
 ```
 
 `status` values: `MATCH_STATUS_PLAYED`, `MATCH_STATUS_NO_OPPONENT`.
-`combat_log` is populated only when status is `MATCH_STATUS_PLAYED`.
+`combat_log` and `opponent_grid` are populated only when status is `MATCH_STATUS_PLAYED`.
+`opponent_grid` is the ghost's public board (identity, dimensions, equipped items only).
+Bench, gold, and life values are stripped server-side - they are private to the ghost.
+Store it in `GameState.opponent_grid` so `CombatReplayScene` can render the enemy board.
 Players start combat at 1000 HP.
 Store the `combat_log` in `GameState.last_combat_log`.
 Navigate to `CombatReplayScene` and pass the log for playback.

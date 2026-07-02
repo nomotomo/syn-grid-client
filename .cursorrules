@@ -1,0 +1,16 @@
+# Cursor Agent Behavior Lock
+
+Before executing any agentic task, reading codebase context, or writing code, you MUST read and conform to the guidelines established in the root `CLAUDE.md` file.
+
+- Your role is strictly IMPLEMENTATION (writing production code, running tests, fixing errors).
+- You are strictly FORBIDDEN from altering architectural design documents or modifying `CLAUDE.md`.
+
+# Git & GitHub Operations Rule
+
+Whenever the user asks you to implement a feature or fix a bug:
+
+1. Run `gh issue list` or search to see if the issue exists.
+2. If absent, create it: `gh issue create --title "..." --body "..."`.
+3. Checkout a new branch: `git checkout -b feature/issue-[number]-[description]`.
+4. Only begin writing code *after* this branch is successfully created.
+5. When complete, push the branch to origin so it is visible for review.

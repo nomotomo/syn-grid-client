@@ -1,0 +1,133 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/combat_replay/CombatReplayScene.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/combat/CombatLogPlayer.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/HpBar.gd" id="3"]
+
+[node name="CombatReplayScene" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="ShakeCamera" type="Camera2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Background" type="ColorRect" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.1, 1)
+
+[node name="TickLabel" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+text = "TICK 0"
+
+[node name="SkipButton" type="Button" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.82
+anchor_top = 0.012
+anchor_right = 0.98
+anchor_bottom = 0.042
+theme_override_font_sizes/font_size = 16
+text = "SKIP >>"
+
+[node name="OppName" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 16
+text = "OPPONENT"
+
+[node name="OppBar" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+script = ExtResource("3")
+
+[node name="OppGridArea" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="OppGridContainer" type="GridContainer" parent="OppGridArea"]
+unique_name_in_owner = true
+columns = 4
+
+[node name="VsLabel" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"HudValueLabel"
+horizontal_alignment = 1
+text = "- VS -"
+
+[node name="PlayerGridArea" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="PlayerGridContainer" type="GridContainer" parent="PlayerGridArea"]
+unique_name_in_owner = true
+columns = 4
+
+[node name="PlayerBar" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+script = ExtResource("3")
+
+[node name="PlayerName" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"CaptionLabel"
+theme_override_font_sizes/font_size = 16
+text = "YOU"
+
+[node name="FloatLayer" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ResultOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.65)
+
+[node name="ResultBanner" type="Label" parent="ResultOverlay"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.42
+anchor_right = 0.5
+anchor_bottom = 0.42
+offset_left = -400.0
+offset_top = -60.0
+offset_right = 400.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"TitleLabel"
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "VICTORY"
+
+[node name="ContinueButton" type="Button" parent="ResultOverlay"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.56
+anchor_right = 0.5
+anchor_bottom = 0.56
+offset_left = -260.0
+offset_top = -55.0
+offset_right = 260.0
+offset_bottom = 55.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 26
+text = "CONTINUE"
+
+[node name="LogPlayer" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2")

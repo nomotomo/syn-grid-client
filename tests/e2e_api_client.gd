@@ -43,12 +43,19 @@ func _run_all() -> void:
 	var slots: Array = shop.data.get("slots", [])
 	_check(slots.size() > 0, "shop returns slots")
 
-	# 3. Purchase the cheapest affordable slot
+	# 3. Purchase the cheapest affordable WEAPON so our side always fires and
+	# the combat log is guaranteed events (a potion-only board against a
+	# weaponless ghost produces an empty log); fall back to cheapest anything.
 	var pick: Dictionary = {}
-	for slot in slots:
-		var price := int(slot.get("buy_price", 999999))
-		if price <= GameState.gold and (pick.is_empty() or price < int(pick.get("buy_price", 999999))):
-			pick = slot
+	for prefer_weapon in [true, false]:
+		for slot in slots:
+			if prefer_weapon and String(slot.get("item_type", "")) != "WEAPON":
+				continue
+			var price := int(slot.get("buy_price", 999999))
+			if price <= GameState.gold and (pick.is_empty() or price < int(pick.get("buy_price", 999999))):
+				pick = slot
+		if not pick.is_empty():
+			break
 	if not _check(not pick.is_empty(), "an affordable slot exists"):
 		return
 	var buy := await _call(ApiClient.purchase_item.bind(pick["template_name"], 1),
@@ -80,6 +87,10 @@ func _run_all() -> void:
 	var log: Dictionary = match_resp.data.get("combat_log", {})
 	_check(int(log.get("total_ticks", 0)) > 0, "combat log has ticks")
 	_check((log.get("events", []) as Array).size() > 0, "combat log has events")
+	var opp: Dictionary = match_resp.data.get("opponent_grid", {})
+	_check((opp.get("equipped_items", []) as Array).size() > 0, "opponent grid has equipped items")
+	_check(not opp.has("gold_balance") or int(opp.get("gold_balance", 0)) == 0,
+		"opponent private fields stripped")
 
 	# 6. Award round gold
 	var won: bool = log.get("winner_id", "") == device_id

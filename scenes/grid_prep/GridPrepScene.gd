@@ -11,6 +11,7 @@ extends Control
 const ITEM_CARD_SCENE: PackedScene = preload("res://scenes/ui/ItemCard.tscn")
 const SYNERGY_BORDER_SCENE: PackedScene = preload("res://scenes/ui/SynergyBorder.tscn")
 const MAIN_MENU_SCENE_PATH: String = "res://scenes/main_menu/MainMenu.tscn"
+const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatReplayScene.tscn"
 
 @export var cell_size: Vector2 = Vector2(150, 150)
 @export var grid_columns: int = 4
@@ -57,6 +58,7 @@ var _dragging_origin: Node = null
 var _highlighted_cell: GridCell = null
 
 var _purchase_in_flight: bool = false
+var _match_in_flight: bool = false
 var _pending_sell_card: ItemCard = null
 var _known_bench_ids: Dictionary = {}
 var _bench_dirty: bool = false
@@ -88,9 +90,13 @@ func _ready() -> void:
 	ApiClient.sell_item_failed.connect(_on_sell_item_failed)
 	ApiClient.award_round_gold_completed.connect(_on_award_round_gold_completed)
 	ApiClient.award_round_gold_failed.connect(_on_award_round_gold_failed)
+	ApiClient.start_match_completed.connect(_on_start_match_completed)
+	ApiClient.start_match_failed.connect(_on_start_match_failed)
 
 	_hub_button.pressed.connect(
 		func() -> void: get_tree().change_scene_to_file(MAIN_MENU_SCENE_PATH))
+	_start_match_button.pressed.connect(_on_start_match_pressed)
+	_refresh_start_button()
 
 	AudioManager.play_prep_bgm()
 	_request_round_grant()
@@ -410,6 +416,37 @@ func _on_sell_item_failed(_code: int, reason: String) -> void:
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		_return_card_to(card, _bench_row)
 
+# -- Start match --
+
+func _refresh_start_button() -> void:
+	var ready_to_fight := not GameState.equipped_items.is_empty()
+	_start_match_button.disabled = not ready_to_fight or _match_in_flight
+	_start_match_button.text = "START MATCH" if ready_to_fight else "PLACE AN ITEM TO FIGHT"
+
+func _on_start_match_pressed() -> void:
+	if _match_in_flight:
+		return
+	_match_in_flight = true
+	_refresh_start_button()
+	_status_label.text = "SEARCHING FOR OPPONENT..."
+	ApiClient.start_match(GameState.to_grid_payload(grid_columns, grid_rows))
+
+func _on_start_match_completed(data: Dictionary) -> void:
+	_match_in_flight = false
+	if String(data.get("status", "")) != "MATCH_STATUS_PLAYED":
+		_refresh_start_button()
+		_status_label.text = "NO OPPONENT AVAILABLE - TRY AGAIN SOON"
+		return
+	GameState.last_combat_log = data.get("combat_log", {})
+	GameState.opponent_grid = data.get("opponent_grid", {})
+	GameState.last_fight_won = GameState.last_combat_log.get("winner_id", "") == GameState.player_id
+	get_tree().change_scene_to_file(COMBAT_REPLAY_SCENE_PATH)
+
+func _on_start_match_failed(_code: int, reason: String) -> void:
+	_match_in_flight = false
+	_refresh_start_button()
+	_status_label.text = "MATCH FAILED - %s" % reason
+
 # -- Placement (client-owned; see header comment) --
 
 func _place_card(card: ItemCard, cell: GridCell) -> void:
@@ -425,6 +462,7 @@ func _place_card(card: ItemCard, cell: GridCell) -> void:
 	AudioManager.play_grid_snap()
 
 	_status_label.text = "placed %s at (%d, %d)" % [item.get("name", "?"), cell.grid_x, cell.grid_y]
+	_refresh_start_button()
 	ApiClient.validate_grid(GameState.to_grid_payload(grid_columns, grid_rows))
 
 func _unplace_card(card: ItemCard) -> void:
@@ -437,6 +475,7 @@ func _unplace_card(card: ItemCard) -> void:
 	_known_bench_ids[item.get("item_id", "")] = true
 
 	_status_label.text = "returned %s to bench" % item.get("name", "?")
+	_refresh_start_button()
 	ApiClient.validate_grid(GameState.to_grid_payload(grid_columns, grid_rows))
 
 func _move_item_to_equipped(item: Dictionary, x: int, y: int) -> void:

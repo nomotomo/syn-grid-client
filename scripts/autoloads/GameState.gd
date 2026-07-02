@@ -38,6 +38,9 @@ var gold_awarded_round: int = 0
 var last_combat_log: Dictionary = {}
 var last_fight_won: bool = false
 
+# Opponent ghost's public board from StartMatchResponse (equipped items only)
+var opponent_grid: Dictionary = {}
+
 func is_authenticated() -> bool:
 	return token != "" and Time.get_unix_time_from_system() < token_expires_at - 300
 

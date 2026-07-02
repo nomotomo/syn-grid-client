@@ -26,7 +26,9 @@ func _ready() -> void:
 
 func load_log(combat_log: Dictionary) -> void:
 	_combat_log = combat_log
-	_queue = combat_log.get("events", []).duplicate(true)
+	# JSON gives an untyped Array; assign() copies it into the typed queue
+	# (direct assignment to Array[Dictionary] raises at runtime).
+	_queue.assign((combat_log.get("events", []) as Array).duplicate(true))
 	_paused = false
 	_timer.start()
 
