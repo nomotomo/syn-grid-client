@@ -275,6 +275,8 @@ Response:
 ```
 
 `next_round` is int64 and may arrive as a JSON string from grpc-gateway.
+`winner_id` must equal `attacker_id` or `defender_id`.
+The `round` field is used for match deduplication; finalizing the same round twice is rejected.
 The server persists `current_round = round + 1` on the caller's grid record.
 `gold_rewarded` is non-zero when a triumph milestone was crossed (e.g. 5th triumph).
 `attacker_state.eliminated = true` means life points reached 0 - trigger the game-over screen.
@@ -305,7 +307,8 @@ Returns `404` when the player has no saved grid yet (brand-new player).
 ### POST /v1/run/reset
 
 Resets a terminal run (life <= 0 or triumph >= 10) to a fresh state.
-Non-terminal callers receive `412` with reason `RUN_NOT_TERMINAL`.
+Non-terminal callers receive HTTP `400` with ErrorInfo reason `RUN_NOT_TERMINAL`.
+Branch on the `reason` field, not the HTTP status code.
 
 Response:
 ```json

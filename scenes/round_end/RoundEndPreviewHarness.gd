@@ -106,6 +106,9 @@ func _instance_scene() -> void:
 func _mock_offline_award() -> void:
 	if _scene == null:
 		return
+	var mode := OS.get_environment("SYNGRID_RESULT")
+	if mode in ["dead", "victory"]:
+		return
 	if ApiClient.award_round_gold_failed.is_connected(_scene._on_award_round_gold_failed):
 		ApiClient.award_round_gold_failed.disconnect(_scene._on_award_round_gold_failed)
 	var grant := 12 if bool(GameState.last_round_result.get("won", true)) else 10
@@ -115,8 +118,8 @@ func _mock_offline_award() -> void:
 	})
 
 func _run_offline_verify(screenshot_path: String) -> void:
-	# Mid-ceremony: banner + hearts/orbs visible, buttons may still be animating.
-	for _i in 90:
+	# Full ceremony: orbs finish ~2.2s wall; 150 frames captures post-orbs state.
+	for _i in 150:
 		await get_tree().process_frame
 	var mode := OS.get_environment("SYNGRID_RESULT")
 	if mode == "":

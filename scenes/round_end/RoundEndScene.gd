@@ -153,6 +153,7 @@ func _animate_hearts() -> void:
 		_hearts_row.add_child(holder)
 		_heart_holders.append(holder)
 	if _is_eliminated:
+		AudioManager.play_fatal_hp_loss()
 		for i in _heart_holders.size():
 			await get_tree().create_timer(heart_stagger).timeout
 			_shatter_heart(_heart_holders[i])
@@ -289,6 +290,8 @@ func _request_payout_grant() -> void:
 	ApiClient.award_round_gold(_next_round, _won)
 
 func _on_award_round_gold_completed(data: Dictionary) -> void:
+	if _is_eliminated or _is_victory:
+		return
 	_award_pending = false
 	var awarded := int(data.get("gold_awarded", 0))
 	GameState.gold = int(data.get("new_balance", GameState.gold))
@@ -348,11 +351,11 @@ func _on_reset_run_completed(data: Dictionary) -> void:
 	GameState.last_round_result = {}
 	get_tree().change_scene_to_file(PREP_SCENE_PATH)
 
-func _on_reset_run_failed(code: int, reason: String) -> void:
+func _on_reset_run_failed(_code: int, reason: String) -> void:
 	_new_run_button.disabled = false
 	_new_run_button.text = "RETRY NEW RUN"
 	_status_label.text = "RESET FAILED - %s" % reason
-	if code == 412 and reason.to_upper().contains("RUN_NOT_TERMINAL"):
+	if reason == "RUN_NOT_TERMINAL":
 		ApiClient.get_active_grid_completed.connect(_on_reset_recover_grid_completed, CONNECT_ONE_SHOT)
 		ApiClient.get_active_grid_failed.connect(_on_reset_recover_grid_failed, CONNECT_ONE_SHOT)
 		ApiClient.get_active_grid()

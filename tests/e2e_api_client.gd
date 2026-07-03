@@ -98,6 +98,7 @@ func _run_all() -> void:
 		ApiClient.award_round_gold_completed, ApiClient.award_round_gold_failed)
 	if _require(gold, "award_round_gold"):
 		_check(gold.data.has("new_balance"), "award returns new_balance")
+		GameState.gold = int(gold.data.get("new_balance", GameState.gold))
 
 	# 7. Finalize the round
 	var fin := await _call(ApiClient.finalize_round.bind(
@@ -139,15 +140,15 @@ func _run_all() -> void:
 		else:
 			print("skipped: award_round_gold replay failed (server #34 may be unmerged)")
 
-	# 7d. reset_run on live non-terminal run should 412
+	# 7d. reset_run on live non-terminal run should reject with RUN_NOT_TERMINAL
 	var reset := await _call(ApiClient.reset_run,
 		ApiClient.reset_run_completed, ApiClient.reset_run_failed)
-	if not reset.ok and reset.code == 412:
+	if not reset.ok and reset.reason == "RUN_NOT_TERMINAL":
 		print("E2E pass: reset_run rejects non-terminal run")
 	elif reset.ok:
 		print("skipped: reset_run succeeded on non-terminal run (unexpected)")
 	else:
-		print("skipped: reset_run code=%s (server #37 may be unmerged)" % reset.code)
+		print("skipped: reset_run reason=%s (server #37 may be unmerged)" % reset.reason)
 
 	# 8. Leaderboard (int64 fields arrive as JSON strings)
 	var lb := await _call(ApiClient.get_leaderboard.bind(5),

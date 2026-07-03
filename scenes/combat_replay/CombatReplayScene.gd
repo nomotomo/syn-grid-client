@@ -58,6 +58,9 @@ var _round_played: int = 0
 var _fight_won: bool = false
 var _finalize_synced: bool = false
 
+enum ContinueAction { SYNCING, CONTINUE, RETRY_SYNC, BACK_TO_PREP }
+var _continue_action: ContinueAction = ContinueAction.SYNCING
+
 func _ready() -> void:
 	theme = ThemeBuilder.get_theme()
 	_background.color = SynGridPalette.PANEL_BG
@@ -343,51 +346,58 @@ func _begin_finalize_round() -> void:
 func _on_finalize_round_completed(data: Dictionary) -> void:
 	GameState.apply_round_result(data, _fight_won, _round_played)
 	_finalize_synced = true
+	_continue_action = ContinueAction.CONTINUE
 	_continue_button.disabled = false
 	_continue_button.text = "CONTINUE"
 
-func _on_finalize_round_failed(code: int, reason: String) -> void:
-	var upper := reason.to_upper()
-	if code in [409, 412] and ("RESOLVED" in upper or "ALREADY" in upper):
-		_set_finalize_status("RECOVERING STATE...")
-		ApiClient.get_active_grid_completed.connect(_on_recover_grid_completed, CONNECT_ONE_SHOT)
-		ApiClient.get_active_grid_failed.connect(_on_recover_grid_failed, CONNECT_ONE_SHOT)
-		ApiClient.get_active_grid()
-		return
-	if code == 412 and ("NOT_STARTED" in upper or "MATCH" in upper):
-		_set_finalize_status("MATCH STATE LOST - REFIGHT")
-		_continue_button.disabled = false
-		_continue_button.text = "BACK TO PREP"
-		_finalize_synced = true
-		return
-	_set_finalize_status("SYNC FAILED - %s" % reason)
-	_continue_button.disabled = false
-	_continue_button.text = "RETRY SYNC"
+func _on_finalize_round_failed(_code: int, reason: String) -> void:
+	match reason:
+		"MATCH_ALREADY_RESOLVED":
+			_set_finalize_status("RECOVERING STATE...")
+			_continue_action = ContinueAction.BACK_TO_PREP
+			ApiClient.get_active_grid_completed.connect(_on_recover_grid_completed, CONNECT_ONE_SHOT)
+			ApiClient.get_active_grid_failed.connect(_on_recover_grid_failed, CONNECT_ONE_SHOT)
+			ApiClient.get_active_grid()
+		"MATCH_NOT_STARTED":
+			_set_finalize_status("MATCH STATE LOST - REFIGHT")
+			_finalize_synced = true
+			_continue_action = ContinueAction.BACK_TO_PREP
+			_continue_button.disabled = false
+			_continue_button.text = "BACK TO PREP"
+		_:
+			_set_finalize_status("SYNC FAILED - %s" % reason)
+			_continue_action = ContinueAction.RETRY_SYNC
+			_continue_button.disabled = false
+			_continue_button.text = "RETRY SYNC"
 
 func _on_recover_grid_completed(data: Dictionary) -> void:
 	GameState.hydrate_from_grid(data.get("grid", {}))
 	_finalize_synced = true
+	_continue_action = ContinueAction.BACK_TO_PREP
 	_continue_button.disabled = false
 	_continue_button.text = "BACK TO PREP"
 
 func _on_recover_grid_failed(_code: int, reason: String) -> void:
 	_set_finalize_status("RECOVERY FAILED - %s" % reason)
+	_finalize_synced = true
+	_continue_action = ContinueAction.BACK_TO_PREP
 	_continue_button.disabled = false
 	_continue_button.text = "BACK TO PREP"
-	_finalize_synced = true
 
 func _on_continue_pressed() -> void:
-	if _continue_button.text == "RETRY SYNC":
+	if _continue_action == ContinueAction.RETRY_SYNC:
+		_continue_action = ContinueAction.SYNCING
 		_continue_button.disabled = true
 		_continue_button.text = "SYNCING..."
 		_begin_finalize_round()
 		return
 	await _pulse(_continue_button).finished
-	if _continue_button.text == "BACK TO PREP":
-		get_tree().change_scene_to_file(PREP_SCENE_PATH)
-		return
-	if _finalize_synced:
-		get_tree().change_scene_to_file(ROUND_END_SCENE_PATH)
+	match _continue_action:
+		ContinueAction.BACK_TO_PREP:
+			get_tree().change_scene_to_file(PREP_SCENE_PATH)
+		ContinueAction.CONTINUE:
+			if _finalize_synced:
+				get_tree().change_scene_to_file(ROUND_END_SCENE_PATH)
 
 func _set_finalize_status(text: String) -> void:
 	_tick_label.text = text
