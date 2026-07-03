@@ -60,6 +60,22 @@ When the user introduces a new project, component, or feature, you MUST guide th
 - **Your Action:** Author the concrete interfaces, error-handling contracts, simple coding patterns, and comment formats inside `docs/low-level-design/`.
 - **Your Output:** Conclude the session by outputting a precise, single-sentence command block that the user can copy-paste directly into Cursor Agent to initiate implementation (referencing the newly created documents via `@`).
 
+## PR Review Protocol (Claude Code, Lead Architect)
+
+How Claude Code reviews every client PR before it can merge.
+The verdict is a pass/fail checklist against the governing LLD's review acceptance checklist in `docs/low-level-design/`; "Done" requires a pass.
+
+1. **Gather**: `gh pr view <n>` + `gh pr diff <n>`; the PR diff is the only scope.
+   Check out the branch into a scratch worktree so post-change scenes can be run without touching the main checkout.
+2. **Dynamic verification is mandatory, not optional**:
+   `godot --headless --path . --import` (refresh the class cache), then the headless boot check, then every affected preview harness in offline mode with `SYNGRID_SCREENSHOT`, and LOOK at the screenshots - a blank or broken frame is a failure.
+   When the feature's server dependencies are merged, also run the live harness modes (`SYNGRID_LIVE=1`) and `tests/ApiE2E.tscn` against a running server.
+3. **Static review angles**: line-by-line correctness (typed-array `.assign()`, lambda by-value capture, int64-as-string conversions, signal connect/disconnect balance); removed-behavior audit; cross-file trace of every touched signal and autoload; reuse (SynGridPalette/ThemeBuilder/existing components before new ones); simplification; juice-contract compliance (no LINEAR tweens on scale/position/rotation, stagger rhythm, SFX matrix only - no invented audio events, no glass behind live numbers); conventions (this file plus the user-global CLAUDE.md, including plain-dash-only typography).
+4. **Verdict**: blockers (LLD/acceptance violations, contract breaches, crashes) separated from non-blocking improvements; pre-existing gaps become new issues, not PR blockers.
+   Every blocker names the file/line, the failure scenario, and the required fix direction.
+5. **Post**: `gh pr review <n> --request-changes|--approve --body-file <review.md>`; GitHub forbids formal verdicts on a same-account PR - fall back to `gh pr review <n> --comment` with the verdict in the body, which carries the same authority under this workflow.
+6. **Cleanup**: remove the scratch worktree.
+
 ## What This Is
 
 The mobile game client for Syn-Grid, an asymmetric asynchronous inventory management auto-battler.

@@ -82,12 +82,13 @@ in ResetRun, so a spoofed client gains nothing.
   enables with text `CONTINUE` and its press routes to
   `res://scenes/round_end/RoundEndScene.tscn` after the standard `_pulse`.
 - On `finalize_round_completed`: `GameState.apply_round_result(data, won, round_played)`.
-- Error contract (`finalize_round_failed`):
+- Error contract (`finalize_round_failed`).
+  Branch on the ErrorInfo `reason` string, never the HTTP status: grpc-gateway maps `FAILED_PRECONDITION` to HTTP 400 by default, so status codes are ambiguous.
 
-| code | reason | behavior |
+| reason | HTTP (informational) | behavior |
 |---|---|---|
-| 409/412 | match already resolved | Round was finalized earlier (crash replay). Call `get_active_grid`, rehydrate, route to prep. |
-| 412 | match not started | Redis matchstate lost. Status `MATCH STATE LOST - REFIGHT`, CONTINUE becomes `BACK TO PREP`, route to prep (HLD risk section). |
+| `MATCH_ALREADY_RESOLVED` | 409 | Round was finalized earlier (crash replay). Call `get_active_grid`, rehydrate, route to prep. |
+| `MATCH_NOT_STARTED` | 400 | Redis matchstate lost. Status `MATCH STATE LOST - REFIGHT`, CONTINUE becomes `BACK TO PREP`, route to prep (HLD risk section). |
 | any other | - | Status `SYNC FAILED - <reason>`, CONTINUE becomes `RETRY SYNC` and re-invokes finalize. |
 
 ## RoundEndScene specification
@@ -141,7 +142,7 @@ Input: `GameState.last_round_result` (set by CombatReplayScene).
 - Victory (`triumph_count >= 10`): banner `GRID DOMINATED` in teal; all 10 orbs fill in a 0.04s-staggered cascade; `play_triumph_milestone()`; skip payout; NewRunButton shown.
 - NewRunButton press: disable + text `RESETTING...`, call `ApiClient.reset_run()`.
   On `reset_run_completed`: `GameState.hydrate_from_grid(data.grid)`, `GameState.gold = int(data.new_balance)`, `GameState.gold_awarded_round = 0`, `GameState.last_round_result = {}`, route to prep.
-  On `reset_run_failed`: re-enable with text `RETRY NEW RUN`, StatusLabel `RESET FAILED - <reason>` (412 `RUN_NOT_TERMINAL` means desynced state: also call `get_active_grid` and rehydrate).
+  On `reset_run_failed`: re-enable with text `RETRY NEW RUN`, StatusLabel `RESET FAILED - <reason>` (reason `RUN_NOT_TERMINAL`, HTTP 400, means desynced state: also call `get_active_grid` and rehydrate).
 
 ### Audio summary for this scene (contract section 5 - no invented events)
 
@@ -177,7 +178,7 @@ After `authenticate_completed` hydrates the token, call `ApiClient.get_active_gr
    - `get_active_grid` after purchase returns the bench item and matching `gold_balance`.
    - `finalize_round` response includes `next_round == round + 1`.
    - `award_round_gold` called twice for the same round changes the balance exactly once.
-   - `reset_run` on a live (non-terminal) run returns 412 with reason `RUN_NOT_TERMINAL`.
+   - `reset_run` on a live (non-terminal) run fails with reason `RUN_NOT_TERMINAL` (HTTP 400; assert on the reason, not the status).
 5. Headless boot check and both existing harnesses must stay green (no regressions in prep/replay).
 
 ## Review acceptance checklist (Claude Code pass/fail gate)
