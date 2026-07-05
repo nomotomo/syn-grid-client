@@ -47,6 +47,7 @@ const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 @onready var _result_overlay: ColorRect = %ResultOverlay
 @onready var _result_banner: Label = %ResultBanner
 @onready var _continue_button: Button = %ContinueButton
+@onready var _status_label: Label = %StatusLabel
 @onready var _log_player: CombatLogPlayer = %LogPlayer
 
 var _cards_by_item_id: Dictionary = {}   # item_id -> ItemCard
@@ -385,13 +386,14 @@ func _on_recover_grid_failed(_code: int, reason: String) -> void:
 	_continue_button.text = "BACK TO PREP"
 
 func _on_continue_pressed() -> void:
+	await _pulse(_continue_button).finished
 	if _continue_action == ContinueAction.RETRY_SYNC:
 		_continue_action = ContinueAction.SYNCING
 		_continue_button.disabled = true
 		_continue_button.text = "SYNCING..."
+		_status_label.text = ""
 		_begin_finalize_round()
 		return
-	await _pulse(_continue_button).finished
 	match _continue_action:
 		ContinueAction.BACK_TO_PREP:
 			get_tree().change_scene_to_file(PREP_SCENE_PATH)
@@ -400,7 +402,7 @@ func _on_continue_pressed() -> void:
 				get_tree().change_scene_to_file(ROUND_END_SCENE_PATH)
 
 func _set_finalize_status(text: String) -> void:
-	_tick_label.text = text
+	_status_label.text = text
 
 func _pulse(control: Control) -> Tween:
 	control.pivot_offset = control.size / 2.0

@@ -127,7 +127,7 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	print("auto-verify: mode=%s banner=%s" % [mode, _scene.get_node("%Banner").text])
 	print("auto-verify: status=%s continue=%s new_run=%s" % [
 		_scene.get_node("%StatusLabel").text,
-		not _scene.get_node("%ContinueButton").disabled,
+		_scene.get_node("%ContinueButton").visible,
 		_scene.get_node("%NewRunButton").visible])
 	_save_and_quit(screenshot_path)
 

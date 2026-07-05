@@ -434,12 +434,11 @@ All errors follow gRPC-gateway's error format:
 ```
 
 HTTP status codes map to gRPC codes:
-- `400` = INVALID_ARGUMENT
+- `400` = INVALID_ARGUMENT or FAILED_PRECONDITION (grpc-gateway maps both; branch on ErrorInfo `reason`, not HTTP status)
 - `401` = UNAUTHENTICATED
 - `403` = PERMISSION_DENIED
 - `404` = NOT_FOUND
 - `409` = ALREADY_EXISTS
-- `412` = FAILED_PRECONDITION
 - `429` = RESOURCE_EXHAUSTED (rate limit)
 - `500` = INTERNAL
 
