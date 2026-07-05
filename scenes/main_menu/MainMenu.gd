@@ -10,6 +10,7 @@ extends Control
 # responses.
 
 const PREP_SCENE_PATH: String = "res://scenes/grid_prep/GridPrepScene.tscn"
+const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScene.tscn"
 
 # Entry cascade (contract section 2 card-pop rhythm, applied to bento panels).
 @export var entry_pop_duration: float = 0.12
@@ -74,6 +75,7 @@ func _ready() -> void:
 	ApiClient.update_profile_failed.connect(_on_update_profile_failed)
 
 	_play_button.pressed.connect(_on_play_pressed)
+	_leaderboard_button.pressed.connect(_on_leaderboard_pressed)
 	_edit_name_button.pressed.connect(_on_edit_name_pressed)
 	_confirm_name_button.pressed.connect(_on_confirm_name_pressed)
 	_cancel_name_button.pressed.connect(func() -> void: _close_name_popover())
@@ -127,7 +129,9 @@ func _on_get_active_grid_failed(code: int, _reason: String) -> void:
 func _enable_play() -> void:
 	_play_button.disabled = false
 	_play_button.text = "ENTER THE GRID"
+	_leaderboard_button.disabled = false
 	_play_panel_pop(_play_button, 0)
+	_play_panel_pop(_leaderboard_button, 1)
 
 func _on_authenticate_failed(code: int, reason: String) -> void:
 	_authenticated = false
@@ -260,6 +264,14 @@ func _on_play_pressed() -> void:
 		return
 	await _pulse(_play_button).finished
 	get_tree().change_scene_to_file(PREP_SCENE_PATH)
+
+func _on_leaderboard_pressed() -> void:
+	if not _authenticated:
+		_pulse(_leaderboard_button)
+		_begin_session()
+		return
+	await _pulse(_leaderboard_button).finished
+	get_tree().change_scene_to_file(LEADERBOARD_SCENE_PATH)
 
 # -- Juice helpers (contract section 2) --
 

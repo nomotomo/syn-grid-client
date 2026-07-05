@@ -1,0 +1,159 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/leaderboard/LeaderboardScene.gd" id="1"]
+
+[node name="LeaderboardScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.08, 0.08, 0.1, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(120, 64)
+text = "BACK"
+
+[node name="TitleLabel" type="Label" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudValueLabel"
+horizontal_alignment = 1
+text = "GLOBAL LEADERBOARD"
+
+[node name="TabRow" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LeaderboardTab" type="Button" parent="Margin/Layout/TabRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
+text = "LEADERBOARD"
+
+[node name="SeasonTab" type="Button" parent="Margin/Layout/TabRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
+text = "SEASON"
+
+[node name="LeaderboardPanel" type="Control" parent="Margin/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LeaderboardError" type="Label" parent="Margin/Layout/LeaderboardPanel"]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
+text = "Failed to load - tap to retry"
+
+[node name="ListScroll" type="ScrollContainer" parent="Margin/Layout/LeaderboardPanel"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ListBox" type="VBoxContainer" parent="Margin/Layout/LeaderboardPanel/ListScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="SeasonPanel" type="Control" parent="Margin/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+visible = false
+
+[node name="SeasonVBox" type="VBoxContainer" parent="Margin/Layout/SeasonPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="SeasonName" type="Label" parent="Margin/Layout/SeasonPanel/SeasonVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudValueLabel"
+text = "SEASON 1"
+
+[node name="SeasonCountdown" type="Label" parent="Margin/Layout/SeasonPanel/SeasonVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "0D 0H 0M"
+
+[node name="SeasonRank" type="Label" parent="Margin/Layout/SeasonPanel/SeasonVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudValueLabel"
+text = "YOUR RANK: #1"
+
+[node name="BracketBox" type="VBoxContainer" parent="Margin/Layout/SeasonPanel/SeasonVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SeasonPlaceholder" type="Label" parent="Margin/Layout/SeasonPanel/SeasonVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+visible = false
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = "No active season"
+
+[node name="CountdownTimer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 1.0
+autostart = false

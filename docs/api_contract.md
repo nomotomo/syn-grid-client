@@ -356,6 +356,16 @@ Response:
 ```
 
 `caller_rank` is 0 when the caller is unranked.
+
+Optional extension (not yet returned by all server builds; render when present):
+
+```json
+"reward_brackets": [
+  { "min_rank": "1", "max_rank": "3", "reward_gold": "500" }
+]
+```
+
+Bracket `min_rank`, `max_rank`, and `reward_gold` are int64 and may arrive as JSON strings.
 Returns `404` when no active season exists (between seasons).
 Returns `412 Precondition Failed` when DATABASE_URL is not set on the server.
 
