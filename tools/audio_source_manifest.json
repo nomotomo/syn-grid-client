@@ -10,7 +10,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Click_Combo_3 — multi-click shop reroll."
+      "note": "Click_Combo_3 - multi-click shop reroll."
     },
     "sfx_synergy_link.wav": {
       "source": "hove/synergy_link.wav",
@@ -18,7 +18,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Tone2A_MajorTriadUp — ascending link chime (pitch-scaled in code)."
+      "note": "Tone2A_MajorTriadUp - ascending link chime (pitch-scaled in code)."
     },
     "sfx_grid_snap.wav": {
       "source": "hove/grid_snap.wav",
@@ -26,7 +26,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Glitch_10 — short tactile snap."
+      "note": "Glitch_10 - short tactile snap."
     },
     "sfx_item_drag.wav": {
       "source": "hove/item_drag.wav",
@@ -34,7 +34,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Tone2A — soft pickup bleep."
+      "note": "Tone2A - soft pickup bleep."
     },
     "sfx_win_round.wav": {
       "source": "hove/win_round.wav",
@@ -42,7 +42,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Ring_Pitched_Up_1 — win confirmation ring."
+      "note": "Ring_Pitched_Up_1 - win confirmation ring."
     },
     "sfx_triumph_milestone.wav": {
       "source": "hove/triumph_milestone.wav",
@@ -50,7 +50,7 @@
       "creator": "Hove Audio",
       "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
       "license": "Royalty-free, commercial OK, credit requested",
-      "note": "Tone3D_MajorTriadUp — milestone fanfare."
+      "note": "Tone3D_MajorTriadUp - milestone fanfare."
     },
     "sfx_triple_merge.wav": {
       "source": "kenney_dig/Audio/pepSound3.ogg",
@@ -118,7 +118,7 @@
       "source_url": "https://whitebataudio.itch.io/free-cyberpunk-loop-pack",
       "license": "Royalty-free, commercial OK",
       "loop_seconds": 36.0,
-      "note": "Casualty LOOP 3 — dark/atmospheric prep."
+      "note": "Casualty LOOP 3 - dark/atmospheric prep."
     },
     "bgm_combat.wav": {
       "source": "whitebat/combat_loop.wav",
@@ -127,17 +127,7 @@
       "source_url": "https://whitebataudio.itch.io/free-cyberpunk-loop-pack",
       "license": "Royalty-free, commercial OK",
       "loop_seconds": 36.0,
-      "note": "Casualty LOOP 1 — energetic combat."
-    }
-  },
-  "overrides": {
-    "hove": {
-      "description": "Drop SCI-FI_UI_SFX_PACK.zip, extract to staging/hove/, re-run import with --prefer hove",
-      "files": {}
-    },
-    "whitebat": {
-      "description": "Drop Free Cyberpunk Loop Pack zip extract to staging/whitebat/, re-run with --prefer whitebat",
-      "files": {}
+      "note": "Casualty LOOP 1 - energetic combat."
     }
   }
 }

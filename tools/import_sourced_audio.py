@@ -90,7 +90,31 @@ def _tile_to_duration(audio: np.ndarray, seconds: float) -> np.ndarray:
 
 def _verify_wav(path: Path) -> tuple[int, int, int]:
     with wave.open(str(path), "rb") as w:
-        return w.getnchannels(), w.getframerate(), w.getsampwidth()
+        ch, rate, width = w.getnchannels(), w.getframerate(), w.getsampwidth()
+    _assert_plain_pcm_wav(path)
+    return ch, rate, width
+
+
+def _assert_plain_pcm_wav(path: Path) -> None:
+    """Godot's WAV importer rejects WAVE_FORMAT_EXTENSIBLE (0xFFFE) fmt chunks."""
+    data = path.read_bytes()
+    if data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+        raise ValueError(f"{path} is not a RIFF WAVE file")
+    offset = 12
+    while offset + 8 <= len(data):
+        chunk_id = data[offset : offset + 4]
+        chunk_size = int.from_bytes(data[offset + 4 : offset + 8], "little")
+        if chunk_id == b"fmt ":
+            if chunk_size < 2 or offset + 8 + 2 > len(data):
+                raise ValueError(f"{path} has a truncated fmt chunk")
+            fmt_tag = int.from_bytes(data[offset + 8 : offset + 10], "little")
+            if fmt_tag != 1:
+                raise ValueError(
+                    f"{path} uses WAV format tag 0x{fmt_tag:04X}; Godot requires plain PCM (0x0001)"
+                )
+            return
+        offset += 8 + chunk_size + (chunk_size % 2)
+    raise ValueError(f"{path} has no fmt chunk")
 
 
 def import_all(staging: Path, write_credits: bool) -> None:
@@ -108,7 +132,8 @@ def import_all(staging: Path, write_credits: bool) -> None:
         tmp_wav = tmp / dest
         out = SFX_DIR / dest
         _afconvert_mono_wav(src, tmp_wav)
-        shutil.copy2(tmp_wav, out)
+        audio = _read_mono_wav(tmp_wav)
+        _write_mono_wav(out, audio)
         ch, rate, width = _verify_wav(out)
         print(f"SFX {dest}: {ch}ch {rate}Hz width={width} <- {src.name}")
         rows.append({"file": dest, **meta})
