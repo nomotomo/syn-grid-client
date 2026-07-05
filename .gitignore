@@ -40,3 +40,6 @@ assets/raw/
 
 # Build artifacts
 dist/
+
+# graphify knowledge graph (generated locally)
+graphify-out/
