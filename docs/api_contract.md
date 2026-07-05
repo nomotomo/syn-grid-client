@@ -269,15 +269,54 @@ Response:
     "eliminated": false
   },
   "defender_state": { ... },
-  "gold_rewarded": 0
+  "gold_rewarded": 0,
+  "next_round": "4"
 }
 ```
 
+`next_round` is int64 and may arrive as a JSON string from grpc-gateway.
 `winner_id` must equal `attacker_id` or `defender_id`.
 The `round` field is used for match deduplication; finalizing the same round twice is rejected.
+The server persists `current_round = round + 1` on the caller's grid record.
 `gold_rewarded` is non-zero when a triumph milestone was crossed (e.g. 5th triumph).
 `attacker_state.eliminated = true` means life points reached 0 - trigger the game-over screen.
 `attacker_state.triumph_count >= 10` means victory - trigger the victory screen.
+
+### GET /v1/me/grid
+
+Returns the caller's persisted grid record for session rehydration after app restart.
+
+Response:
+```json
+{
+  "grid": {
+    "player_id": "uuid",
+    "current_round": 3,
+    "life_points": 4,
+    "triumph_count": 2,
+    "gold_balance": 27,
+    "grid_dimensions": { "columns": 4, "rows": 4 },
+    "equipped_items": [ ... ],
+    "bench_reserve": [ ... ]
+  }
+}
+```
+
+Returns `404` when the player has no saved grid yet (brand-new player).
+
+### POST /v1/run/reset
+
+Resets a terminal run (life <= 0 or triumph >= 10) to a fresh state.
+Non-terminal callers receive HTTP `400` with ErrorInfo reason `RUN_NOT_TERMINAL`.
+Branch on the `reason` field, not the HTTP status code.
+
+Response:
+```json
+{
+  "grid": { ...Grid object at round 1, life 5, triumph 0, empty board... },
+  "new_balance": 10
+}
+```
 
 ---
 
@@ -395,12 +434,11 @@ All errors follow gRPC-gateway's error format:
 ```
 
 HTTP status codes map to gRPC codes:
-- `400` = INVALID_ARGUMENT
+- `400` = INVALID_ARGUMENT or FAILED_PRECONDITION (grpc-gateway maps both; branch on ErrorInfo `reason`, not HTTP status)
 - `401` = UNAUTHENTICATED
 - `403` = PERMISSION_DENIED
 - `404` = NOT_FOUND
 - `409` = ALREADY_EXISTS
-- `412` = FAILED_PRECONDITION
 - `429` = RESOURCE_EXHAUSTED (rate limit)
 - `500` = INTERNAL
 
