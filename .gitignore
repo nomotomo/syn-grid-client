@@ -31,6 +31,8 @@ export_presets.cfg
 .env.local
 *.pem
 *.key
+*.jks
+*.keystore
 
 # Logs
 *.log
@@ -40,6 +42,10 @@ assets/raw/
 
 # Build artifacts
 dist/
+
+# Android Gradle build output (template sources live under android/build/)
+android/build/
+android/.gradle/
 
 # graphify knowledge graph (generated locally)
 graphify-out/
