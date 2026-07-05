@@ -1,0 +1,133 @@
+{
+  "staging_roots": [
+    "/tmp/syngrid-audio-src",
+    "assets/audio/_import_sources"
+  ],
+  "sfx": {
+    "sfx_shop_reroll.wav": {
+      "source": "hove/shop_reroll.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Click_Combo_3 - multi-click shop reroll."
+    },
+    "sfx_synergy_link.wav": {
+      "source": "hove/synergy_link.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Tone2A_MajorTriadUp - ascending link chime (pitch-scaled in code)."
+    },
+    "sfx_grid_snap.wav": {
+      "source": "hove/grid_snap.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Glitch_10 - short tactile snap."
+    },
+    "sfx_item_drag.wav": {
+      "source": "hove/item_drag.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Tone2A - soft pickup bleep."
+    },
+    "sfx_win_round.wav": {
+      "source": "hove/win_round.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Ring_Pitched_Up_1 - win confirmation ring."
+    },
+    "sfx_triumph_milestone.wav": {
+      "source": "hove/triumph_milestone.wav",
+      "pack": "Free Sci-Fi UI Sound Effects Pack",
+      "creator": "Hove Audio",
+      "source_url": "https://hoveaudio.itch.io/free-sci-fi-ui-sound-effects-pack",
+      "license": "Royalty-free, commercial OK, credit requested",
+      "note": "Tone3D_MajorTriadUp - milestone fanfare."
+    },
+    "sfx_triple_merge.wav": {
+      "source": "kenney_dig/Audio/pepSound3.ogg",
+      "pack": "Kenney Digital Audio",
+      "creator": "Kenney",
+      "source_url": "https://kenney.nl/assets/digital-audio",
+      "license": "CC0 1.0"
+    },
+    "sfx_melee_strike.wav": {
+      "source": "rpg80/blade_02.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    },
+    "sfx_ranged_strike.wav": {
+      "source": "rpg80/chain_02.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0",
+      "note": "Metallic twang used as bow snap analogue."
+    },
+    "sfx_arcane_strike.wav": {
+      "source": "rpg80/spell_fire_03.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    },
+    "sfx_crit_hit.wav": {
+      "source": "rpg80/metal_03.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    },
+    "sfx_shield_absorb.wav": {
+      "source": "rpg80/metal_02.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    },
+    "sfx_hp_loss.wav": {
+      "source": "rpg80/creature_hurt_01.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    },
+    "sfx_fatal_hp_loss.wav": {
+      "source": "rpg80/creature_die_01.ogg",
+      "pack": "80 CC0 RPG SFX",
+      "creator": "rubberduck",
+      "source_url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "license": "CC0 1.0"
+    }
+  },
+  "bgm": {
+    "bgm_prep.wav": {
+      "source": "whitebat/prep_loop.wav",
+      "pack": "Free Cyberpunk Loop Pack",
+      "creator": "Karl Casey @ White Bat Audio",
+      "source_url": "https://whitebataudio.itch.io/free-cyberpunk-loop-pack",
+      "license": "Royalty-free, commercial OK",
+      "loop_seconds": 36.0,
+      "note": "Casualty LOOP 3 - dark/atmospheric prep."
+    },
+    "bgm_combat.wav": {
+      "source": "whitebat/combat_loop.wav",
+      "pack": "Free Cyberpunk Loop Pack",
+      "creator": "Karl Casey @ White Bat Audio",
+      "source_url": "https://whitebataudio.itch.io/free-cyberpunk-loop-pack",
+      "license": "Royalty-free, commercial OK",
+      "loop_seconds": 36.0,
+      "note": "Casualty LOOP 1 - energetic combat."
+    }
+  }
+}
