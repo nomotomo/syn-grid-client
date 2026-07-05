@@ -217,9 +217,10 @@ The client must present the same semantics the server computes.
 | C5 | GridPrepScene - single prep screen: shop row + drag-drop placement + synergy glow | Complete |
 | C6 | CombatReplayScene - event queue, sprite lunge, screen shake, damage floats | Complete |
 | C7 | RoundEndScene - win/loss banner, life hearts, triumph orbs | Complete |
-| C8 | LeaderboardScene + SeasonScene | Pending |
+| C8 | LeaderboardScene + SeasonScene | Complete |
 | C9 | AudioManager - BGM cross-fade, full SFX event matrix | Pending |
-| C10 | Android export, release build pipeline | Pending |
+| C10 | Item/HUD icon sprites + rounded neon-glass theme pass | Pending |
+| C11 | Android export, release build pipeline | Pending |
 
 ## Commands
 
@@ -241,6 +242,7 @@ SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=win godot --path . --resolution 5
 SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=loss godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
 SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=dead godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
 SYNGRID_SCREENSHOT=/tmp/out.png SYNGRID_RESULT=victory godot --path . --resolution 540x960 scenes/round_end/RoundEndPreviewHarness.tscn
+SYNGRID_SCREENSHOT=/tmp/out.png godot --path . --resolution 540x960 scenes/leaderboard/LeaderboardPreviewHarness.tscn
 
 # Export Android debug APK (requires export templates installed)
 godot --headless --export-debug "Android" export/syn-grid-debug.apk
