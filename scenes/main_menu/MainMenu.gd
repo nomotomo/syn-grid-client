@@ -43,6 +43,10 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _play_button: Button = %PlayButton
 @onready var _leaderboard_button: Button = %LeaderboardButton
 @onready var _status_label: Label = %StatusLabel
+@onready var _home_tab: Button = %HomeTab
+@onready var _leaderboard_tab: Button = %LeaderboardTab
+@onready var _season_tab: Button = %SeasonTab
+@onready var _profile_tab: Button = %ProfileTab
 @onready var _popover_backdrop: ColorRect = %PopoverBackdrop
 @onready var _name_popover: PanelContainer = %NameEditPopover
 @onready var _name_edit: LineEdit = %NameEdit
@@ -54,263 +58,296 @@ var _authenticated: bool = false
 var _popover_tween: Tween = null
 
 func _ready() -> void:
-	theme = ThemeBuilder.get_theme()
-	_background.color = SynGridPalette.PANEL_BG
-	_subtitle_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
-	_season_rank.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
-	# Glass is permitted here: the callsign popover is an impermanent popover
-	# with no live numeric values on it (contract section 1).
-	_name_popover.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
-		SynGridPalette.BORDER_ACTIVE, Color(0.12, 0.12, 0.15, 0.88)))
+        theme = ThemeBuilder.get_theme()
+        _background.color = SynGridPalette.PANEL_BG
+        _subtitle_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        _season_rank.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        # Glass is permitted here: the callsign popover is an impermanent popover
+        # with no live numeric values on it (contract section 1).
+        _name_popover.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
+                SynGridPalette.BORDER_ACTIVE, Color(0.12, 0.12, 0.15, 0.88)))
 
-	ApiClient.authenticate_completed.connect(_on_authenticate_completed)
-	ApiClient.authenticate_failed.connect(_on_authenticate_failed)
-	ApiClient.get_active_grid_completed.connect(_on_get_active_grid_completed)
-	ApiClient.get_active_grid_failed.connect(_on_get_active_grid_failed)
-	ApiClient.get_profile_completed.connect(_on_get_profile_completed)
-	ApiClient.get_profile_failed.connect(_on_get_profile_failed)
-	ApiClient.get_active_season_completed.connect(_on_get_active_season_completed)
-	ApiClient.get_active_season_failed.connect(_on_get_active_season_failed)
-	ApiClient.update_profile_completed.connect(_on_update_profile_completed)
-	ApiClient.update_profile_failed.connect(_on_update_profile_failed)
+        ApiClient.authenticate_completed.connect(_on_authenticate_completed)
+        ApiClient.authenticate_failed.connect(_on_authenticate_failed)
+        ApiClient.get_active_grid_completed.connect(_on_get_active_grid_completed)
+        ApiClient.get_active_grid_failed.connect(_on_get_active_grid_failed)
+        ApiClient.get_profile_completed.connect(_on_get_profile_completed)
+        ApiClient.get_profile_failed.connect(_on_get_profile_failed)
+        ApiClient.get_active_season_completed.connect(_on_get_active_season_completed)
+        ApiClient.get_active_season_failed.connect(_on_get_active_season_failed)
+        ApiClient.update_profile_completed.connect(_on_update_profile_completed)
+        ApiClient.update_profile_failed.connect(_on_update_profile_failed)
 
-	_play_button.pressed.connect(_on_play_pressed)
-	_leaderboard_button.pressed.connect(_on_leaderboard_pressed)
-	_edit_name_button.pressed.connect(_on_edit_name_pressed)
-	_confirm_name_button.pressed.connect(_on_confirm_name_pressed)
-	_cancel_name_button.pressed.connect(func() -> void: _close_name_popover())
-	_name_edit.text_submitted.connect(func(_text: String) -> void: _on_confirm_name_pressed())
-	_popover_backdrop.gui_input.connect(_on_backdrop_input)
-	_season_timer.timeout.connect(_update_season_countdown)
+        _play_button.pressed.connect(_on_play_pressed)
+        _leaderboard_button.pressed.connect(_on_leaderboard_pressed)
+        _home_tab.pressed.connect(_on_home_tab_pressed)
+        _leaderboard_tab.pressed.connect(_on_leaderboard_pressed)
+        _season_tab.pressed.connect(_on_season_tab_pressed)
+        _profile_tab.pressed.connect(_on_profile_tab_pressed)
+        _style_active_tab(_home_tab)
+        _edit_name_button.pressed.connect(_on_edit_name_pressed)
+        _confirm_name_button.pressed.connect(_on_confirm_name_pressed)
+        _cancel_name_button.pressed.connect(func() -> void: _close_name_popover())
+        _name_edit.text_submitted.connect(func(_text: String) -> void: _on_confirm_name_pressed())
+        _popover_backdrop.gui_input.connect(_on_backdrop_input)
+        _season_timer.timeout.connect(_update_season_countdown)
 
-	_refresh_identity()
-	_stats_hud.refresh()
-	await _play_entry_cascade()
-	AudioManager.play_prep_bgm()
-	_begin_session()
+        _refresh_identity()
+        _stats_hud.refresh()
+        await _play_entry_cascade()
+        AudioManager.play_prep_bgm()
+        _begin_session()
 
 # -- Session boot / hydration --
 
 func _begin_session() -> void:
-	_set_status("LINKING TO GRID...")
-	_play_button.disabled = true
-	_play_button.text = "LINKING..."
-	ApiClient.authenticate(GameState.get_or_create_device_id())
+        _set_status("LINKING TO GRID...")
+        _play_button.disabled = true
+        _play_button.text = "LINKING..."
+        ApiClient.authenticate(GameState.get_or_create_device_id())
 
 func _on_authenticate_completed(data: Dictionary) -> void:
-	GameState.hydrate_from_auth(data)
-	_authenticated = true
-	_stats_hud.refresh()
-	_refresh_identity()
-	_set_status("SYNCING RUN STATE...")
-	_play_button.disabled = true
-	_play_button.text = "SYNCING..."
-	ApiClient.get_active_grid()
-	ApiClient.get_profile()
-	ApiClient.get_active_season()
+        GameState.hydrate_from_auth(data)
+        _authenticated = true
+        _stats_hud.refresh()
+        _refresh_identity()
+        _set_status("SYNCING RUN STATE...")
+        _play_button.disabled = true
+        _play_button.text = "SYNCING..."
+        ApiClient.get_active_grid()
+        ApiClient.get_profile()
+        ApiClient.get_active_season()
 
 func _on_get_active_grid_completed(data: Dictionary) -> void:
-	GameState.hydrate_from_grid(data.get("grid", {}))
-	_stats_hud.refresh()
-	_refresh_identity()
-	if GameState.current_round > 1:
-		_set_status("RUN RESUMED - ROUND %d" % GameState.current_round)
-	else:
-		_set_status("LINK ESTABLISHED")
-	_enable_play()
+        GameState.hydrate_from_grid(data.get("grid", {}))
+        _stats_hud.refresh()
+        _refresh_identity()
+        if GameState.current_round > 1:
+                _set_status("RUN RESUMED - ROUND %d" % GameState.current_round)
+        else:
+                _set_status("LINK ESTABLISHED")
+        _enable_play()
 
 func _on_get_active_grid_failed(code: int, _reason: String) -> void:
-	if code == 404:
-		_set_status("LINK ESTABLISHED")
-	else:
-		_set_status("STATE SYNC OFFLINE")
-	_enable_play()
+        if code == 404:
+                _set_status("LINK ESTABLISHED")
+        else:
+                _set_status("STATE SYNC OFFLINE")
+        _enable_play()
 
 func _enable_play() -> void:
-	_play_button.disabled = false
-	_play_button.text = "ENTER THE GRID"
-	_leaderboard_button.disabled = false
-	_play_panel_pop(_play_button, 0)
-	_play_panel_pop(_leaderboard_button, 1)
+        _play_button.disabled = false
+        _play_button.text = "ENTER THE GRID"
+        _leaderboard_button.disabled = false
+        _play_panel_pop(_play_button, 0)
+        _play_panel_pop(_leaderboard_button, 1)
 
 func _on_authenticate_failed(code: int, reason: String) -> void:
-	_authenticated = false
-	_set_status("LINK FAILED - %s (%s)" % [reason, str(code)])
-	_play_button.disabled = false
-	_play_button.text = "RETRY LINK"
+        _authenticated = false
+        _set_status("LINK FAILED - %s (%s)" % [reason, str(code)])
+        _play_button.disabled = false
+        _play_button.text = "RETRY LINK"
 
 # -- Profile --
 
 func _on_get_profile_completed(data: Dictionary) -> void:
-	GameState.display_name = String(data.get("display_name", ""))
-	GameState.avatar_id = String(data.get("avatar_id", ""))
-	_refresh_identity()
+        GameState.display_name = String(data.get("display_name", ""))
+        GameState.avatar_id = String(data.get("avatar_id", ""))
+        _refresh_identity()
 
 func _on_get_profile_failed(_code: int, _reason: String) -> void:
-	_refresh_identity()
+        _refresh_identity()
 
 func _refresh_identity() -> void:
-	var shown_name := GameState.display_name
-	if shown_name == "":
-		shown_name = "OPERATIVE-%s" % GameState.player_id.substr(0, 8).to_upper()
-	if _name_label.text != shown_name:
-		_name_label.text = shown_name
-		_play_panel_pop(_name_label, 0)
-	_player_id_label.text = GameState.player_id
-	_avatar_initial.text = shown_name.substr(0, 1).to_upper()
-	var tints: Array[Color] = [SynGridPalette.ACCENT_TEAL, SynGridPalette.ACCENT_PURPLE, SynGridPalette.GOLD]
-	var tint: Color = tints[abs(hash(GameState.avatar_id + shown_name)) % tints.size()]
-	_avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
-	_avatar_initial.add_theme_color_override("font_color", tint)
+        var shown_name := GameState.display_name
+        if shown_name == "":
+                shown_name = "OPERATIVE-%s" % GameState.player_id.substr(0, 8).to_upper()
+        if _name_label.text != shown_name:
+                _name_label.text = shown_name
+                _play_panel_pop(_name_label, 0)
+        _player_id_label.text = GameState.player_id
+        _avatar_initial.text = shown_name.substr(0, 1).to_upper()
+        var tints: Array[Color] = [SynGridPalette.ACCENT_TEAL, SynGridPalette.ACCENT_PURPLE, SynGridPalette.GOLD]
+        var tint: Color = tints[abs(hash(GameState.avatar_id + shown_name)) % tints.size()]
+        _avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
+        _avatar_initial.add_theme_color_override("font_color", tint)
 
 # -- Season --
 
 func _on_get_active_season_completed(data: Dictionary) -> void:
-	GameState.season = {
-		"season_id": int(data.get("season_id", 0)),
-		"name": String(data.get("name", "")),
-		"ends_at_unix": int(str(data.get("ends_at_unix", "0"))),
-		"caller_rank": int(str(data.get("caller_rank", "0"))),
-	}
-	_season_name.text = String(GameState.season["name"]).to_upper()
-	var rank: int = GameState.season["caller_rank"]
-	_season_rank.text = ("RANK #%d" % rank) if rank > 0 else "UNRANKED"
-	_play_panel_pop(_season_name, 0)
-	_update_season_countdown()
-	_season_timer.start()
+        GameState.season = {
+                "season_id": int(data.get("season_id", 0)),
+                "name": String(data.get("name", "")),
+                "ends_at_unix": int(str(data.get("ends_at_unix", "0"))),
+                "caller_rank": int(str(data.get("caller_rank", "0"))),
+        }
+        _season_name.text = String(GameState.season["name"]).to_upper()
+        var rank: int = GameState.season["caller_rank"]
+        _season_rank.text = ("RANK #%d" % rank) if rank > 0 else "UNRANKED"
+        _play_panel_pop(_season_name, 0)
+        _update_season_countdown()
+        _season_timer.start()
 
 func _on_get_active_season_failed(code: int, _reason: String) -> void:
-	GameState.season = {}
-	_season_name.text = "NO ACTIVE SEASON" if code == 404 else "SEASON LINK DOWN"
-	_season_rank.text = "-"
-	_season_countdown.text = ""
-	_season_timer.stop()
+        GameState.season = {}
+        _season_name.text = "NO ACTIVE SEASON" if code == 404 else "SEASON LINK DOWN"
+        _season_rank.text = "-"
+        _season_countdown.text = ""
+        _season_timer.stop()
 
 func _update_season_countdown() -> void:
-	var ends_at: int = int(GameState.season.get("ends_at_unix", 0))
-	var remaining := ends_at - int(Time.get_unix_time_from_system())
-	if remaining <= 0:
-		_season_countdown.text = "SEASON ENDED"
-		_season_timer.stop()
-		return
-	var days := remaining / 86400
-	var hours := (remaining % 86400) / 3600
-	var minutes := (remaining % 3600) / 60
-	var seconds := remaining % 60
-	if days > 0:
-		_season_countdown.text = "ENDS IN %dD %02dH %02dM" % [days, hours, minutes]
-	else:
-		_season_countdown.text = "ENDS IN %02d:%02d:%02d" % [hours, minutes, seconds]
+        var ends_at: int = int(GameState.season.get("ends_at_unix", 0))
+        var remaining := ends_at - int(Time.get_unix_time_from_system())
+        if remaining <= 0:
+                _season_countdown.text = "SEASON ENDED"
+                _season_timer.stop()
+                return
+        var days := remaining / 86400
+        var hours := (remaining % 86400) / 3600
+        var minutes := (remaining % 3600) / 60
+        var seconds := remaining % 60
+        if days > 0:
+                _season_countdown.text = "ENDS IN %dD %02dH %02dM" % [days, hours, minutes]
+        else:
+                _season_countdown.text = "ENDS IN %02d:%02d:%02d" % [hours, minutes, seconds]
 
 # -- Callsign popover (update_profile round-trip) --
 
 func _on_edit_name_pressed() -> void:
-	_pulse(_edit_name_button)
-	_open_name_popover()
+        _pulse(_edit_name_button)
+        _open_name_popover()
 
 func _open_name_popover() -> void:
-	_popover_backdrop.visible = true
-	_name_popover.visible = true
-	_name_edit.text = GameState.display_name
-	_name_popover.pivot_offset = _name_popover.size / 2.0
-	_kill_popover_tween()
-	_name_popover.scale = Vector2.ZERO
-	_popover_tween = create_tween()
-	_popover_tween.tween_property(_name_popover, "scale", Vector2(1.05, 1.05), popover_pop_duration) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-	_popover_tween.tween_property(_name_popover, "scale", Vector2.ONE, entry_settle_duration) \
-		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
-	_name_edit.grab_focus()
-	_name_edit.caret_column = _name_edit.text.length()
+        _popover_backdrop.visible = true
+        _name_popover.visible = true
+        _name_edit.text = GameState.display_name
+        _name_popover.pivot_offset = _name_popover.size / 2.0
+        _kill_popover_tween()
+        _name_popover.scale = Vector2.ZERO
+        _popover_tween = create_tween()
+        _popover_tween.tween_property(_name_popover, "scale", Vector2(1.05, 1.05), popover_pop_duration) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+        _popover_tween.tween_property(_name_popover, "scale", Vector2.ONE, entry_settle_duration) \
+                .set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+        _name_edit.grab_focus()
+        _name_edit.caret_column = _name_edit.text.length()
 
 func _close_name_popover() -> void:
-	_kill_popover_tween()
-	_popover_tween = create_tween()
-	_popover_tween.tween_property(_name_popover, "scale", Vector2.ZERO, popover_close_duration) \
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
-	_popover_tween.tween_callback(func() -> void:
-		_name_popover.visible = false
-		_popover_backdrop.visible = false)
+        _kill_popover_tween()
+        _popover_tween = create_tween()
+        _popover_tween.tween_property(_name_popover, "scale", Vector2.ZERO, popover_close_duration) \
+                .set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+        _popover_tween.tween_callback(func() -> void:
+                _name_popover.visible = false
+                _popover_backdrop.visible = false)
 
 func _on_confirm_name_pressed() -> void:
-	var new_name := _name_edit.text.strip_edges()
-	if new_name == "" or new_name == GameState.display_name:
-		_close_name_popover()
-		return
-	_confirm_name_button.disabled = true
-	ApiClient.update_profile(new_name, "")
+        var new_name := _name_edit.text.strip_edges()
+        if new_name == "" or new_name == GameState.display_name:
+                _close_name_popover()
+                return
+        _confirm_name_button.disabled = true
+        ApiClient.update_profile(new_name, "")
 
 func _on_update_profile_completed(_data: Dictionary) -> void:
-	_confirm_name_button.disabled = false
-	_close_name_popover()
-	# Re-read from the server rather than trusting local text - the server may
-	# have rejected/normalised the name (1-24 chars, restricted charset).
-	ApiClient.get_profile()
+        _confirm_name_button.disabled = false
+        _close_name_popover()
+        # Re-read from the server rather than trusting local text - the server may
+        # have rejected/normalised the name (1-24 chars, restricted charset).
+        ApiClient.get_profile()
 
 func _on_update_profile_failed(_code: int, reason: String) -> void:
-	_confirm_name_button.disabled = false
-	_set_status("CALLSIGN REJECTED - %s" % reason)
+        _confirm_name_button.disabled = false
+        _set_status("CALLSIGN REJECTED - %s" % reason)
 
 func _on_backdrop_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		_close_name_popover()
+        if event is InputEventMouseButton and event.pressed:
+                _close_name_popover()
 
 # -- Navigation --
 
 func _on_play_pressed() -> void:
-	if not _authenticated:
-		_pulse(_play_button)
-		_begin_session()
-		return
-	await _pulse(_play_button).finished
-	get_tree().change_scene_to_file(PREP_SCENE_PATH)
+        if not _authenticated:
+                _pulse(_play_button)
+                _begin_session()
+                return
+        await _pulse(_play_button).finished
+        get_tree().change_scene_to_file(PREP_SCENE_PATH)
 
 func _on_leaderboard_pressed() -> void:
-	if not _authenticated:
-		_pulse(_leaderboard_button)
-		_begin_session()
-		return
-	await _pulse(_leaderboard_button).finished
-	get_tree().change_scene_to_file(LEADERBOARD_SCENE_PATH)
+        if not _authenticated:
+                _pulse(_leaderboard_button)
+                _begin_session()
+                return
+        await _pulse(_leaderboard_button).finished
+        get_tree().change_scene_to_file(LEADERBOARD_SCENE_PATH)
 
 # -- Juice helpers (contract section 2) --
 
 # Bento reveal: every panel pops in with the shop-card cascade rhythm.
 func _play_entry_cascade() -> void:
-	var panels: Array[Control] = [_title_block, _player_card, _stats_hud,
-		_season_card, _play_button, _leaderboard_button]
-	for panel in panels:
-		panel.scale = Vector2.ZERO
-	# One frame so container layout assigns sizes; pivots must be centred or
-	# the pops look lopsided.
-	await get_tree().process_frame
-	for i in panels.size():
-		_play_panel_pop(panels[i], i)
-	await get_tree().create_timer(
-		panels.size() * entry_stagger_interval + entry_pop_duration + entry_settle_duration).timeout
+        var panels: Array[Control] = [_title_block, _player_card, _stats_hud,
+                _season_card, _play_button, _leaderboard_button]
+        for panel in panels:
+                panel.scale = Vector2.ZERO
+        # One frame so container layout assigns sizes; pivots must be centred or
+        # the pops look lopsided.
+        await get_tree().process_frame
+        for i in panels.size():
+                _play_panel_pop(panels[i], i)
+        await get_tree().create_timer(
+                panels.size() * entry_stagger_interval + entry_pop_duration + entry_settle_duration).timeout
 
 func _play_panel_pop(panel: Control, stagger_idx: int) -> void:
-	panel.pivot_offset = panel.size / 2.0
-	panel.scale = Vector2.ZERO
-	var tw := create_tween()
-	tw.tween_interval(stagger_idx * entry_stagger_interval)
-	tw.tween_property(panel, "scale", Vector2(1.1, 1.1), entry_pop_duration) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-	tw.tween_property(panel, "scale", Vector2.ONE, entry_settle_duration) \
-		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+        panel.pivot_offset = panel.size / 2.0
+        panel.scale = Vector2.ZERO
+        var tw := create_tween()
+        tw.tween_interval(stagger_idx * entry_stagger_interval)
+        tw.tween_property(panel, "scale", Vector2(1.1, 1.1), entry_pop_duration) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+        tw.tween_property(panel, "scale", Vector2.ONE, entry_settle_duration) \
+                .set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
 
 func _pulse(control: Control) -> Tween:
-	control.pivot_offset = control.size / 2.0
-	var tw := create_tween()
-	tw.tween_property(control, "scale", Vector2(press_squish_scale, press_squish_scale),
-		press_squish_duration).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	tw.tween_property(control, "scale", Vector2.ONE, press_release_duration) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	return tw
+        control.pivot_offset = control.size / 2.0
+        var tw := create_tween()
+        tw.tween_property(control, "scale", Vector2(press_squish_scale, press_squish_scale),
+                press_squish_duration).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+        tw.tween_property(control, "scale", Vector2.ONE, press_release_duration) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+        return tw
+
+# -- Bottom nav tab handlers (Neon Grimoire mobile-first navigation) --
+
+func _on_home_tab_pressed() -> void:
+        # Already home - just play a tap pulse for feedback and re-highlight.
+        _pulse(_home_tab)
+        _style_active_tab(_home_tab)
+
+func _on_season_tab_pressed() -> void:
+        _pulse(_season_tab)
+        _set_status("SEASON HUB - COMING SOON")
+
+func _on_profile_tab_pressed() -> void:
+        _pulse(_profile_tab)
+        _open_name_popover()
+
+# Highlight the active tab with a teal border + tinted text; dim the rest.
+# Called on scene enter and whenever the player taps back to Home.
+func _style_active_tab(active: Button) -> void:
+        for tab: Button in [_home_tab, _leaderboard_tab, _season_tab, _profile_tab]:
+                var is_active := tab == active
+                var border := SynGridPalette.ACCENT_TEAL if is_active else SynGridPalette.BORDER_DIM
+                var bg := SynGridPalette.PANEL_BG_HOVER if is_active else SynGridPalette.PANEL_BG_ELEVATED
+                tab.add_theme_stylebox_override("normal",
+                        ThemeBuilder.build_button_style(border, bg, 0, is_active))
+                var text_color := SynGridPalette.ACCENT_TEAL if is_active else SynGridPalette.TEXT_DIM
+                tab.add_theme_color_override("font_color", text_color)
+                tab.add_theme_color_override("font_hover_color", text_color)
 
 func _set_status(text: String) -> void:
-	_status_label.text = text
+        _status_label.text = text
 
 func _kill_popover_tween() -> void:
-	if _popover_tween != null and _popover_tween.is_valid():
-		_popover_tween.kill()
+        if _popover_tween != null and _popover_tween.is_valid():
+                _popover_tween.kill()

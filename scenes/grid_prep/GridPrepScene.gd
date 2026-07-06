@@ -363,8 +363,10 @@ func _process(_delta: float) -> void:
 	if hover != _highlighted_cell:
 		if _highlighted_cell != null:
 			_highlighted_cell.highlight(false)
-		if hover != null and not hover.has_card():
-			hover.highlight(true)
+		if hover != null:
+			# Valid drop = empty cell; invalid = cell already occupied. The cell
+			# pulses DANGER on invalid so the player never wastes a release.
+			hover.highlight(true, not hover.has_card())
 		_highlighted_cell = hover
 	_recycler_panel.add_theme_stylebox_override("panel",
 		_recycler_hot_style if _recycler_panel.get_global_rect().has_point(center)

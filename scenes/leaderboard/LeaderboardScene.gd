@@ -155,7 +155,9 @@ func _render_leaderboard(entries: Array) -> void:
 func _make_leaderboard_row(rank: int, player_id: String, display_name: String,
 		triumph: int, is_self: bool) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0.0, 80.0 if is_self else 68.0)
+	# Top-3 get a taller row so the 72px rank medallion has breathing room.
+	var row_h := 88.0 if rank >= 1 and rank <= 3 else (80.0 if is_self else 68.0)
+	panel.custom_minimum_size = Vector2(0.0, row_h)
 	var border := SynGridPalette.ACCENT_TEAL if is_self else SynGridPalette.BORDER_DIM
 	panel.add_theme_stylebox_override("panel",
 		ThemeBuilder.build_panel_style(border, SynGridPalette.PANEL_BG_ELEVATED))
@@ -166,8 +168,9 @@ func _make_leaderboard_row(rank: int, player_id: String, display_name: String,
 	panel.add_child(row)
 
 	var rank_box := HBoxContainer.new()
-	rank_box.custom_minimum_size = Vector2(72.0, 0.0)
-	rank_box.add_theme_constant_override("separation", 6)
+	# Wider box for the 72px medallion + the "#N" label.
+	rank_box.custom_minimum_size = Vector2(152.0 if rank <= 3 else 72.0, 0.0)
+	rank_box.add_theme_constant_override("separation", 10)
 	row.add_child(rank_box)
 
 	if rank >= 1 and rank <= 3:
@@ -224,13 +227,28 @@ func _make_leaderboard_row(rank: int, player_id: String, display_name: String,
 
 func _make_rank_badge(rank: int) -> Control:
 	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(28.0, 28.0)
-	holder.pivot_offset = Vector2(14.0, 14.0)
+	# Neon Grimoire: top-3 medallions ship at 72px with a per-tier outer glow
+	# so they register as prestigious rather than as tiny sprite squares.
+	holder.custom_minimum_size = Vector2(72.0, 72.0)
+	holder.pivot_offset = Vector2(36.0, 36.0)
+	var glow_color: Color = BADGE_FALLBACK_COLORS.get(rank, SynGridPalette.GOLD)
+	# Soft outer glow via a same-color ColorRect with additive blend, scaled up
+	# behind the medal - cheap on mobile, no shader needed.
+	var glow := ColorRect.new()
+	glow.color = Color(glow_color.r, glow_color.g, glow_color.b, 0.35)
+	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glow.offset_left = -6
+	glow.offset_top = -6
+	glow.offset_right = 6
+	glow.offset_bottom = 6
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(glow)
 	var path: String = BADGE_TEXTURES.get(rank, "")
 	if path != "" and ResourceLoader.exists(path):
 		var tex := TextureRect.new()
 		tex.texture = load(path)
-		tex.self_modulate = BADGE_FALLBACK_COLORS.get(rank, SynGridPalette.GOLD)
+		# Do NOT self_modulate: the regenerated badges already carry their full
+		# metallic palette. Tinting would flatten the medallion bevel.
 		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -238,7 +256,7 @@ func _make_rank_badge(rank: int) -> Control:
 		holder.add_child(tex)
 	else:
 		var dot := ColorRect.new()
-		dot.color = BADGE_FALLBACK_COLORS.get(rank, SynGridPalette.GOLD)
+		dot.color = glow_color
 		dot.set_anchors_preset(Control.PRESET_FULL_RECT)
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(dot)

@@ -1,8 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
 [ext_resource type="Shader" path="res://assets/shaders/arcane_rune_field.gdshader" id="3_runes"]
+[ext_resource type="Shader" path="res://assets/shaders/aurora_border.gdshader" id="4_aurora"]
+[ext_resource type="Shader" path="res://assets/shaders/crt_scanline.gdshader" id="5_crt"]
 
 [sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
 shader = ExtResource("3_runes")
@@ -13,6 +15,24 @@ shader_parameter/pan_speed = 0.04
 shader_parameter/grid_dims = Vector2(6, 12)
 shader_parameter/rune_alpha = 0.28
 shader_parameter/spark_alpha = 0.75
+
+[sub_resource type="ShaderMaterial" id="AuroraMaterial"]
+shader = ExtResource("4_aurora")
+shader_parameter/color_a = Color(0.0, 0.96, 0.83, 1)
+shader_parameter/color_b = Color(0.48, 0.18, 0.75, 1)
+shader_parameter/aurora_speed = 0.35
+shader_parameter/rim_fraction = 0.045
+shader_parameter/glow_strength = 1.35
+shader_parameter/halo_alpha = 0.35
+
+[sub_resource type="ShaderMaterial" id="CrtMaterial"]
+shader = ExtResource("5_crt")
+shader_parameter/scanline_intensity = 0.22
+shader_parameter/scanline_frequency = 220.0
+shader_parameter/chromatic_shift = 0.8
+shader_parameter/jitter_rate = 0.35
+shader_parameter/jitter_amount = 0.6
+shader_parameter/tint = Color(1.0, 1.0, 1.0, 1)
 
 [node name="MainMenu" type="Control"]
 anchor_right = 1.0
@@ -33,7 +53,7 @@ anchor_bottom = 1.0
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 72
 theme_override_constants/margin_right = 48
-theme_override_constants/margin_bottom = 48
+theme_override_constants/margin_bottom = 140
 
 [node name="Layout" type="VBoxContainer" parent="Margin"]
 theme_override_constants/separation = 28
@@ -43,6 +63,7 @@ unique_name_in_owner = true
 theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="Margin/Layout/TitleBlock"]
+material = SubResource("CrtMaterial")
 theme_type_variation = &"TitleLabel"
 horizontal_alignment = 1
 text = "SYN-GRID"
@@ -138,8 +159,24 @@ theme_override_font_sizes/font_size = 36
 disabled = true
 text = "LINKING..."
 
+[node name="AuroraOverlay" type="ColorRect" parent="Margin/Layout/PlayButton"]
+material = SubResource("AuroraMaterial")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+offset_left = -4.0
+offset_top = -4.0
+offset_right = 4.0
+offset_bottom = 4.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
 [node name="LeaderboardButton" type="Button" parent="Margin/Layout"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 90)
 theme_override_font_sizes/font_size = 20
 disabled = true
@@ -205,3 +242,48 @@ text = "CANCEL"
 [node name="SeasonTimer" type="Timer" parent="."]
 unique_name_in_owner = true
 wait_time = 1.0
+
+; -- Bottom nav tab bar (thumb-reachable, sits above safe-area gutter) --------
+[node name="BottomNav" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -108.0
+offset_right = -12.0
+offset_bottom = -12.0
+mouse_filter = 1
+
+[node name="TabRow" type="HBoxContainer" parent="BottomNav"]
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="HomeTab" type="Button" parent="BottomNav/TabRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 88)
+theme_override_font_sizes/font_size = 14
+text = "HOME"
+
+[node name="LeaderboardTab" type="Button" parent="BottomNav/TabRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 88)
+theme_override_font_sizes/font_size = 14
+text = "RANKS"
+
+[node name="SeasonTab" type="Button" parent="BottomNav/TabRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 88)
+theme_override_font_sizes/font_size = 14
+text = "SEASON"
+
+[node name="ProfileTab" type="Button" parent="BottomNav/TabRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 88)
+theme_override_font_sizes/font_size = 14
+text = "PROFILE"

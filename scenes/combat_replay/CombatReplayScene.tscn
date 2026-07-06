@@ -1,8 +1,19 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/combat_replay/CombatReplayScene.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/combat/CombatLogPlayer.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/ui/HpBar.gd" id="3"]
+[ext_resource type="Shader" path="res://assets/shaders/round_timer_ring.gdshader" id="4_timer"]
+
+[sub_resource type="ShaderMaterial" id="TimerRingMaterial"]
+shader = ExtResource("4_timer")
+shader_parameter/color_full = Color(0.0, 0.96, 0.83, 1)
+shader_parameter/color_warn = Color(0.83, 0.51, 0.24, 1)
+shader_parameter/color_danger = Color(0.85, 0.10, 0.10, 1)
+shader_parameter/track_color = Color(0.15, 0.15, 0.19, 1)
+shader_parameter/progress = 1.0
+shader_parameter/ring_thickness = 0.12
+shader_parameter/pulse_hz = 2.0
 
 [node name="CombatReplayScene" type="Control"]
 anchor_right = 1.0
@@ -26,6 +37,21 @@ theme_type_variation = &"CaptionLabel"
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 text = "TICK 0"
+
+[node name="RoundTimerRing" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("TimerRingMaterial")
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+anchor_left = 0.5
+anchor_top = 0.005
+anchor_right = 0.5
+anchor_bottom = 0.005
+offset_left = -32.0
+offset_top = 0.0
+offset_right = 32.0
+offset_bottom = 64.0
+grow_horizontal = 2
 
 [node name="SkipButton" type="Button" parent="."]
 unique_name_in_owner = true

@@ -59,24 +59,53 @@ Rendered via headless Godot 4.5 + Xvfb using the existing `SYNGRID_SCREENSHOT` p
 - `tools/generate_theme_sprites.py` (new: reproducible sprite regeneration)
 - `.gitignore` (adds `/screenshots/`)
 
-## Prioritised backlog
+## Session #2 — P1 backlog cleared  (Jan 2026)
 
-### P1 (next session, from the original theme plan)
-- **Main menu:** aurora border animation on the Play button (masked gradient orbits every 4 s); CRT scanline shader overlay on the SYN-GRID wordmark; bottom-nav tab bar (Play / Leaderboard / Season / Profile) or keep stacked buttons per user choice.
-- **Grid cells:** empty-cell `+` glyph at 10 % opacity; danger-crimson pulse on invalid drop hovers (currently only teal-active on valid hover).
-- **Round timer ring** on Combat Replay: circular teal progress → amber < 30 % → danger < 10 %.
-- **Leaderboard top-3 plinths**: enlarge the badge sprites to 64+ px, add a subtle glow to each rank.
-- **Enemy team red arcane-circle floor + friendly team teal floor** in Combat Replay (currently both teams share the same panel).
+### What was implemented (all 5 from the last "Next Action Items" list)
 
-### P2
-- Ambient dust particles on menu screens (3–5 slow teal specks) — CPUParticles2D with the new `dot.png` texture.
-- Tooltip popovers on HUD pills (glassmorphic legal per juice §1 — tooltips are non-live).
-- Coordinate labels `A1..D4` along top/left of the grid.
+1. **Bottom-nav tab bar on the main menu** — `HOME | RANKS | SEASON | PROFILE`, thumb-reachable at the bottom, HOME styled active (teal border + glow + teal text). RANKS opens the leaderboard, PROFILE opens the callsign popover, SEASON currently sets a "COMING SOON" status until Phase C9 sound + Phase C11 export land. The old standalone `LeaderboardButton` is hidden (kept in the tree to avoid script rewrites but `visible = false`).
+2. **Circular round-timer ring on Combat Replay** — new `assets/shaders/round_timer_ring.gdshader`, 64×64 ColorRect at the top-centre of `CombatReplayScene.tscn`. Colour smoothly transitions `ACCENT_TEAL → ACCENT_AMBER (< 30%) → DANGER (< 10%)` and pulses at 2 Hz below the danger threshold. `_update_round_timer_progress(current_tick, total_ticks)` is called on every `_on_event_played` so the ring stays in lock-step with the log playback.
+3. **Empty-cell "+" glyph + danger-crimson invalid-drop pulse** — `GridCell.gd` now spawns a `+` Label child at 18% alpha on empty cells (auto-hidden the moment an ItemCard is added, via `child_entered_tree`/`child_exiting_tree`). `highlight()` gained a `valid: bool` parameter; when the drag hovers an occupied cell, the border pulses `DANGER` crimson at a faster period (0.3 s vs 0.5 s) so the player never wastes a drop release. `GridPrepScene.gd` wires `hover.highlight(true, not hover.has_card())`.
+4. **Leaderboard top-3 badges enlarged with per-tier glow** — `_make_rank_badge()` bumped from 28×28 to **72×72**, added a same-color outer glow ColorRect at 35% alpha, and dropped the `tex.self_modulate` that was tinting the medallion pixels (the regenerated badges already carry their full metallic palette). Row height for ranks 1-3 grew from 68 to 88 px so the medal has breathing room; the rank-label box widened to 152 px.
+5. **Aurora border on the main-menu Play button + CRT scanline on the SYN-GRID wordmark** —
+   - `assets/shaders/aurora_border.gdshader` renders a teal↔purple gradient orbiting the rim of the button, plus a soft outer halo. Rewritten to be pure-UV (independent of `TEXTURE_PIXEL_SIZE`) so it works on ColorRect overlays with no source texture and on the OpenGL 3 mobile fallback path. Instanced as `AuroraOverlay` inside `PlayButton`, with 4-px negative offsets so the halo bleeds past the button's outer edge.
+   - `assets/shaders/crt_scanline.gdshader` applies a subtle scanline + chromatic aberration + soft time-jitter to the `TitleLabel`. Alpha is preserved (the shader is an overlay, not a fill).
 
-### P3 / Future
-- Item icon rarity glow (per-tier soft outer glow around the icon square).
-- Custom cursor set (arrow / grab / forbidden).
-- Signal-strength bars near the LINKING status.
+### Proof (rendered again through the SYNGRID_SCREENSHOT harnesses)
+Four side-by-side compares in `/screenshots/compare2/`:
+- `compare2_main_menu.png` — bottom nav + aurora rim + CRT title
+- `compare2_grid_prep.png` — empty-cell "+" glyphs on every socket
+- `compare2_leaderboard.png` — 72-px medallions with per-tier glow on top-3 rows
+- `compare2_combat_replay.png` — circular timer ring visible next to the TICK label
+
+### Files changed / added in this session
+- `scenes/main_menu/MainMenu.tscn` (aurora sub_resource, CRT sub_resource, `AuroraOverlay` child on `PlayButton`, hidden legacy `LeaderboardButton`, new `BottomNav` panel with 4 tabs, `Margin.margin_bottom` grew from 48 to 140 to reserve nav space)
+- `scenes/main_menu/MainMenu.gd` (`_home_tab / _leaderboard_tab / _season_tab / _profile_tab` @onreadys, wired tab pressed signals, `_style_active_tab()`, `_on_home_tab_pressed`, `_on_season_tab_pressed`, `_on_profile_tab_pressed`)
+- `scenes/grid_prep/GridCell.gd` (empty "+" Label child, `highlight(on, valid)` signature, danger pulse for invalid targets)
+- `scenes/grid_prep/GridPrepScene.gd` (hover.highlight call passes validity)
+- `scenes/combat_replay/CombatReplayScene.tscn` (timer ring sub_resource + `%RoundTimerRing` ColorRect at top)
+- `scenes/combat_replay/CombatReplayScene.gd` (`_update_round_timer_progress()` + calls from `load_and_start_replay` and `_on_event_played`)
+- `scenes/leaderboard/LeaderboardScene.gd` (rank badge 28→72 px, glow overlay, removed self_modulate tint, taller top-3 rows)
+- `assets/shaders/aurora_border.gdshader` (new)
+- `assets/shaders/crt_scanline.gdshader` (new)
+- `assets/shaders/round_timer_ring.gdshader` (new)
+- `memory/PRD.md` (this section)
+
+### Prioritised backlog (post-session-2)
+
+**P2 (nice-to-have)**
+- Ambient dust particles on menu screens (3-5 slow teal specks) - CPUParticles2D + the new `dot.png` fx texture
+- Tooltip popovers on HUD pills (glassmorphic legal per juice §1 - tooltips are non-live)
+- Grid coordinate labels `A1..D4` along top+left of the deployment grid
+- Bigger tunable for the CRT title effect (currently subtle; could bump `scanline_intensity` if the user wants more retro grit)
+- Wire the SEASON tab to actually route to a Season Hub screen once that scene exists
+- Enemy team red arcane-circle floor + friendly team teal floor in Combat Replay (the two teams still share the same panel style)
+
+**P3 / Future**
+- Custom cursor set (arrow / grab / forbidden)
+- Signal-strength bars near the LINKING status
+- Per-tier item-icon rarity halo behind the sprite
+- Codex screen from the PROFILE tab - a scrollable grimoire of every discovered item
 
 ## What is NOT working / not touched
 - **Vulkan → OpenGL 3 fallback** on the preview pod (no GPU) triggers a benign console warning during proof render; production Android target uses Vulkan Mobile and is unaffected.
