@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
 [ext_resource type="Shader" path="res://assets/shaders/arcane_rune_field.gdshader" id="3_runes"]
 [ext_resource type="Shader" path="res://assets/shaders/aurora_border.gdshader" id="4_aurora"]
 [ext_resource type="Shader" path="res://assets/shaders/crt_scanline.gdshader" id="5_crt"]
+[ext_resource type="Texture2D" path="res://assets/sprites/effects/dot.png" id="6_dust"]
 
 [sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
 shader = ExtResource("3_runes")
@@ -46,6 +47,30 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.08, 0.1, 1)
+
+; -- Ambient dust particles: 5 slow teal specks drifting up-and-diagonal
+; across the whole viewport. Uses the effects/dot.png fx texture that
+; ships in the sprite regenerator. Purely decorative, does not block input.
+[node name="AmbientDust" type="CPUParticles2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(270, 480)
+amount = 5
+lifetime = 14.0
+preprocess = 8.0
+speed_scale = 0.6
+emission_shape = 3
+emission_rect_extents = Vector2(300, 500)
+direction = Vector2(0.4, -1)
+spread = 25.0
+gravity = Vector2(0, -6)
+initial_velocity_min = 6.0
+initial_velocity_max = 14.0
+angular_velocity_min = -8.0
+angular_velocity_max = 8.0
+scale_amount_min = 0.4
+scale_amount_max = 0.9
+color = Color(0.0, 0.96, 0.83, 0.28)
+texture = ExtResource("6_dust")
 
 [node name="Margin" type="MarginContainer" parent="."]
 anchor_right = 1.0

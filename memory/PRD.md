@@ -91,15 +91,35 @@ Four side-by-side compares in `/screenshots/compare2/`:
 - `assets/shaders/round_timer_ring.gdshader` (new)
 - `memory/PRD.md` (this section)
 
-### Prioritised backlog (post-session-2)
+## Session #3 — P2 batch  (Jan 2026)
 
-**P2 (nice-to-have)**
-- Ambient dust particles on menu screens (3-5 slow teal specks) - CPUParticles2D + the new `dot.png` fx texture
-- Tooltip popovers on HUD pills (glassmorphic legal per juice §1 - tooltips are non-live)
-- Grid coordinate labels `A1..D4` along top+left of the deployment grid
-- Bigger tunable for the CRT title effect (currently subtle; could bump `scanline_intensity` if the user wants more retro grit)
+### What was implemented
+
+1. **Enemy team red arcane-circle floor + friendly team teal floor** on Combat Replay — new `assets/shaders/arcane_circle_floor.gdshader` renders a dashed outer ring + six slowly-rotating rune glyphs + soft radial pool tint. Two `ColorRect` nodes (`%OppFloor` red, `%PlayerFloor` teal) added under each grid area with `show_behind_parent = true` so they render UNDER the grid cells. `_layout_screen()` sizes them 18% larger than the grid so the disc extends past the corners.
+2. **Ambient dust particles on the main menu** — new `%AmbientDust` `CPUParticles2D` node using the `assets/sprites/effects/dot.png` texture from the theme sprite regenerator. 5 particles, 14-second lifetime, slow upward-diagonal drift with soft rotation and 28% alpha teal tint. `preprocess = 8.0` means the particles are pre-simulated so they're already scattered when the scene opens (never a "cold start" pop-in).
+3. **Grid coordinate labels A/B/C/D + 1/2/3/4** on the deployment grid — new `_build_coord_labels()` in `GridPrepScene.gd`. Column letters drawn 22 px above the top row of cells, row numbers 24 px left of the leftmost column. `CaptionLabel` type variation, teal @ 55% alpha, centered per cell.
+
+### Proof
+
+Rendered through the SYNGRID_SCREENSHOT harnesses:
+- `/screenshots/compare3/compare3_combat_replay.png` — visible red dashed circle around opponent grid, teal dashed circle around player grid
+- `/screenshots/compare3/compare3_grid_prep.png` — A/B/C/D across top, 1/2/3/4 down left
+- `/screenshots/compare3/compare3_main_menu.png` — subtle teal dust specks drifting across the field
+
+### Files changed / added in this session
+- `assets/shaders/arcane_circle_floor.gdshader` (new)
+- `scenes/combat_replay/CombatReplayScene.tscn` (opp/player floor sub_resources + ColorRect children of grid areas)
+- `scenes/combat_replay/CombatReplayScene.gd` (`_opp_floor` / `_player_floor` @onready refs + sizing loop in `_layout_screen()`)
+- `scenes/main_menu/MainMenu.tscn` (dust texture ext_resource + `%AmbientDust` CPUParticles2D)
+- `scenes/grid_prep/GridPrepScene.gd` (`_build_coord_labels()` called from `_build_cells()`)
+- `memory/PRD.md` (this section)
+
+### Prioritised backlog (post-session-3)
+
+**P2 remaining**
+- Tooltip popovers on HUD pills (glass legal per juice §1)
 - Wire the SEASON tab to actually route to a Season Hub screen once that scene exists
-- Enemy team red arcane-circle floor + friendly team teal floor in Combat Replay (the two teams still share the same panel style)
+- Bigger tunable for the CRT title effect (currently subtle; could bump `scanline_intensity` if you want more retro grit)
 
 **P3 / Future**
 - Custom cursor set (arrow / grab / forbidden)

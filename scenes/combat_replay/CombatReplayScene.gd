@@ -39,11 +39,13 @@ const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 @onready var _opp_bar: HpBar = %OppBar
 @onready var _opp_grid_area: Control = %OppGridArea
 @onready var _opp_grid_container: GridContainer = %OppGridContainer
+@onready var _opp_floor: ColorRect = %OppFloor
 @onready var _vs_label: Label = %VsLabel
 @onready var _player_name: Label = %PlayerName
 @onready var _player_bar: HpBar = %PlayerBar
 @onready var _player_grid_area: Control = %PlayerGridArea
 @onready var _player_grid_container: GridContainer = %PlayerGridContainer
+@onready var _player_floor: ColorRect = %PlayerFloor
 @onready var _float_layer: Control = %FloatLayer
 @onready var _result_overlay: ColorRect = %ResultOverlay
 @onready var _result_banner: Label = %ResultBanner
@@ -145,6 +147,15 @@ func _layout_screen() -> void:
                 container.add_theme_constant_override("h_separation", 0)
                 container.add_theme_constant_override("v_separation", 0)
                 container.size = grid_total
+
+        # Arcane-circle floors sit under each team's grid, sized larger than the
+        # grid so the disc extends past the corners. Enemy = red danger tint,
+        # player = teal ACCENT tint. Shaders animate on their own via TIME.
+        for pair in [[_opp_floor, _opp_grid_area], [_player_floor, _player_grid_area]]:
+                var floor_rect: ColorRect = pair[0]
+                var expand := grid_total.x * 0.18
+                floor_rect.position = Vector2(-expand, -expand)
+                floor_rect.size = grid_total + Vector2(expand * 2.0, expand * 2.0)
 
 func _build_side(side: String, items: Array, container: GridContainer, mirror_x: bool) -> void:
         var cells: Dictionary = {}

@@ -163,6 +163,39 @@ func _build_cells() -> void:
 			cell.setup(x, y, _cell_outer_size())
 			_grid_container.add_child(cell)
 			_cells.append(cell)
+	_build_coord_labels()
+
+# Neon Grimoire coordinate labels: A/B/C/D across the top of the deployment
+# grid and 1/2/3/4 down the left. Sci-fi targeting feel, one-line-of-code cost.
+# Labels are children of %GridArea so they layout relative to the grid's own
+# top-left origin.
+func _build_coord_labels() -> void:
+	var outer := _cell_outer_size()
+	var col_letters := ["A", "B", "C", "D"]
+	for x in grid_columns:
+		var col_label := Label.new()
+		col_label.theme_type_variation = &"CaptionLabel"
+		col_label.add_theme_color_override("font_color",
+			Color(SynGridPalette.ACCENT_TEAL, 0.55))
+		col_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		col_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col_label.text = col_letters[x] if x < col_letters.size() else str(x)
+		col_label.position = Vector2(x * outer.x, -22.0)
+		col_label.size = Vector2(outer.x, 20.0)
+		_grid_area.add_child(col_label)
+	for y in grid_rows:
+		var row_label := Label.new()
+		row_label.theme_type_variation = &"CaptionLabel"
+		row_label.add_theme_color_override("font_color",
+			Color(SynGridPalette.ACCENT_TEAL, 0.55))
+		row_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row_label.text = str(y + 1)
+		row_label.position = Vector2(-24.0, y * outer.y)
+		row_label.size = Vector2(20.0, outer.y)
+		_grid_area.add_child(row_label)
 
 func _cell_at(x: int, y: int) -> GridCell:
 	if x < 0 or x >= grid_columns or y < 0 or y >= grid_rows:
