@@ -208,15 +208,19 @@ func _make_heart_holder(full: bool) -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(heart_size, heart_size)
 	holder.pivot_offset = Vector2(heart_size, heart_size) * 0.5
-	var rect := ColorRect.new()
-	rect.size = Vector2(heart_size * 0.7, heart_size * 0.7)
-	rect.position = Vector2(heart_size * 0.15, heart_size * 0.15)
-	rect.rotation = PI / 4.0
-	rect.pivot_offset = rect.size / 2.0
-	rect.color = SynGridPalette.HP_LOW if full else SynGridPalette.TEXT_DIM
-	rect.color.a = 0.9 if full else 0.25
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(rect)
+	# Neon Grimoire: full hearts use the crystal-heart pixel sprite. Lost hearts
+	# fall back to a dim silhouette (self_modulated to TEXT_DIM at low alpha).
+	var tex := TextureRect.new()
+	tex.size = Vector2(heart_size, heart_size)
+	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex.texture = load("res://assets/sprites/ui/icon_life.png")
+	tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if full:
+		tex.modulate = Color(1, 1, 1, 1)
+	else:
+		tex.modulate = Color(SynGridPalette.TEXT_DIM, 0.35)
+	holder.add_child(tex)
 	holder.scale = Vector2.ZERO
 	return holder
 
@@ -224,12 +228,20 @@ func _make_orb_holder(filled: bool) -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(orb_size, orb_size)
 	holder.pivot_offset = Vector2(orb_size, orb_size) * 0.5
-	var rect := ColorRect.new()
-	rect.size = Vector2(orb_size, orb_size)
-	rect.color = SynGridPalette.ACCENT_TEAL if filled else SynGridPalette.TEXT_DIM
-	rect.color.a = 0.9 if filled else 0.25
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(rect)
+	# Neon Grimoire: filled orbs use the laurel-ring triumph sprite. Empty
+	# orbs render a dimmed silhouette so the row reads as "progress toward
+	# victory" rather than random blocks.
+	var tex := TextureRect.new()
+	tex.size = Vector2(orb_size, orb_size)
+	tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tex.texture = load("res://assets/sprites/ui/icon_triumph.png")
+	tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if filled:
+		tex.modulate = Color(1, 1, 1, 1)
+	else:
+		tex.modulate = Color(SynGridPalette.TEXT_DIM, 0.3)
+	holder.add_child(tex)
 	holder.scale = Vector2.ZERO
 	return holder
 
@@ -264,9 +276,16 @@ func _build_ring_particles(ring_radius: float, inner_radius: float, amount: int,
 		lifetime: float, vel_min: float, vel_max: float, scale_max: float,
 		from_color: Color, to_color: Color) -> CPUParticles2D:
 	var particles := CPUParticles2D.new()
-	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RING
-	particles.emission_ring_radius = ring_radius
-	particles.emission_ring_inner_radius = inner_radius
+	# Ring emission was added to CPUParticles2D in Godot 4.7. On 4.5 stable we
+	# fall back to SPHERE_SURFACE which emits from a circle boundary in 2D -
+	# visually identical to a thin ring at the sizes this project uses.
+	if "emission_ring_radius" in particles:
+		particles.set("emission_shape", 6)  # EMISSION_SHAPE_RING
+		particles.set("emission_ring_radius", ring_radius)
+		particles.set("emission_ring_inner_radius", inner_radius)
+	else:
+		particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE_SURFACE
+		particles.emission_sphere_radius = ring_radius
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.amount = amount

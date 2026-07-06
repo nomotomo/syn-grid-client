@@ -7,12 +7,22 @@ extends PanelContainer
 # shop/grid/economy logic - callers connect to the signals below and decide
 # what happens next. The card owns every tween that animates itself, so
 # scale/rotation animations can never fight across owners.
+#
+# Neon Grimoire visual model:
+#   * Tier-colored panel border (bronze/silver/gold/epic) built from
+#     SynGridPalette.tint_for_tier(item.level).
+#   * Category tint radial background wash (%TintBg) - warm crimson for
+#     MELEE, forest for RANGED, purple for ARCANE, steel for SHIELD.
+#   * Icon fills the top 55% of the card.
+#   * Stat pips (%AtkPip / %DefPip / %SpdPip) sit in a 14% band under the
+#     icon and read out base_attributes returned by the server.
+#   * Cost chip (%BadgeLabel) top-left, tier chip (%TierLabel) top-right.
 
 signal card_pressed(item_data: Dictionary)
 signal drag_started(card: ItemCard)
 signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 
-@export var card_size: Vector2 = Vector2(150, 150)
+@export var card_size: Vector2 = Vector2(140, 168)
 
 # Shop slots are tap-to-buy and must never enter the drag lifecycle.
 @export var draggable: bool = true
@@ -42,18 +52,26 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 @export var snap_bounce_duration: float = 0.08
 @export var snap_settle_duration: float = 0.04
 
+# Neon Grimoire card treatment.
+@export var tint_bg_alpha: float = 0.14
+@export var tint_bg_alpha_dragging: float = 0.24
+
+@onready var _tint_bg: ColorRect = %TintBg
 @onready var _icon_rect: ColorRect = %IconRect
 @onready var _icon_texture: TextureRect = %IconTexture
 @onready var _name_label: Label = %NameLabel
 @onready var _badge_label: Label = %BadgeLabel
+@onready var _tier_label: Label = %TierLabel
+@onready var _atk_pip: Label = %AtkPip
+@onready var _def_pip: Label = %DefPip
+@onready var _spd_pip: Label = %SpdPip
 
 var _item_data: Dictionary = {}
 var _dragging: bool = false
 var _press_start_pos: Vector2 = Vector2.ZERO
 var _drag_target_pos: Vector2 = Vector2.ZERO
 var _scale_tween: Tween = null
-var _rest_style: StyleBoxFlat
-var _drag_style: StyleBoxFlat
+var _tier_color: Color = SynGridPalette.TIER_BRONZE
 
 func _ready() -> void:
 	custom_minimum_size = card_size
@@ -61,11 +79,7 @@ func _ready() -> void:
 	# (top-left) makes pops and tilts look lopsided.
 	pivot_offset = size / 2.0
 	resized.connect(func() -> void: pivot_offset = size / 2.0)
-	_rest_style = ThemeBuilder.build_panel_style(
-		SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
-	_drag_style = ThemeBuilder.build_panel_style(
-		SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_ELEVATED, drag_shadow_size)
-	add_theme_stylebox_override("panel", _rest_style)
+	_apply_rest_style()
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 
@@ -80,6 +94,7 @@ func _icon_path_for(item: Dictionary) -> String:
 func set_item_data(item: Dictionary) -> void:
 	_item_data = item
 	_name_label.text = String(item.get("name", item.get("template_name", "?")))
+
 	var path := _icon_path_for(item)
 	if ResourceLoader.exists(path):
 		_icon_texture.texture = load(path)
@@ -90,14 +105,75 @@ func set_item_data(item: Dictionary) -> void:
 		_icon_rect.visible = true
 		_icon_rect.color = SynGridPalette.tint_for_weapon_category(item.get("weapon_category", ""))
 
+	# Category tint radial wash across the card.
+	var cat_tint := SynGridPalette.tint_for_weapon_category(item.get("weapon_category", ""))
+	_tint_bg.color = Color(cat_tint.r, cat_tint.g, cat_tint.b, tint_bg_alpha)
+
+	# Tier ring color from level (bronze/silver/gold/epic).
+	var level := int(item.get("level", 1))
+	_tier_color = SynGridPalette.tint_for_tier(level)
+
+	# Cost chip (shop only) OR level chip (bench/grid).
 	if item.has("buy_price"):
 		_badge_label.text = "%dg" % int(item["buy_price"])
 		_badge_label.visible = true
-	elif int(item.get("level", 1)) > 1:
-		_badge_label.text = "Lv%d" % int(item["level"])
-		_badge_label.visible = true
 	else:
 		_badge_label.visible = false
+
+	if level > 1:
+		_tier_label.text = _roman(level)
+		_tier_label.add_theme_color_override("font_color", _tier_color)
+		_tier_label.visible = true
+	else:
+		_tier_label.visible = false
+
+	# Stat pips - drawn from server-provided base_attributes so this card never
+	# invents numbers. Each pip carries its own colored glyph so the eye can
+	# scan an entire shop row at once. Glyphs are ASCII so the project's
+	# pixel font renders them cleanly (Unicode geometric shapes are missing).
+	var attrs: Dictionary = item.get("base_attributes", {}) as Dictionary
+	_set_pip(_atk_pip, "A", _pip_value(attrs, ["base_dmg", "attack", "atk"]),
+			SynGridPalette.DANGER)
+	_set_pip(_def_pip, "D", _pip_value(attrs, ["armor_rating", "defense", "def"]),
+			SynGridPalette.ACCENT_SILVER)
+	_set_pip(_spd_pip, "S", _pip_value(attrs, ["attack_speed", "speed", "spd"]),
+			SynGridPalette.ACCENT_TEAL)
+
+	_apply_rest_style()
+
+func _pip_value(attrs: Dictionary, keys: Array) -> int:
+	for k in keys:
+		if attrs.has(k):
+			return int(round(float(attrs[k])))
+	return -1
+
+func _set_pip(label: Label, glyph: String, value: int, color: Color) -> void:
+	if value < 0:
+		label.text = ""
+		return
+	label.text = "%s %d" % [glyph, value]
+	label.add_theme_color_override("font_color", color)
+
+func _roman(n: int) -> String:
+	# Small helper - enough for tier labels 1..10; anything higher wraps to arabic.
+	var table := [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]
+	if n <= 0 or n > 10:
+		return str(n)
+	var out := ""
+	var v := n
+	for pair: Array in table:
+		while v >= int(pair[0]):
+			out += String(pair[1])
+			v -= int(pair[0])
+	return out
+
+func _apply_rest_style() -> void:
+	add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
+		_tier_color, SynGridPalette.PANEL_BG_ELEVATED, 0, true))
+
+func _apply_drag_style() -> void:
+	add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
+		SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER, drag_shadow_size))
 
 func play_pop(stagger_idx: int) -> void:
 	_kill_scale_tween()
@@ -146,7 +222,10 @@ func _gui_input(event: InputEvent) -> void:
 
 func _begin_drag() -> void:
 	_dragging = true
-	add_theme_stylebox_override("panel", _drag_style)
+	_apply_drag_style()
+	# Pull the category tint slightly forward while held.
+	var c := _tint_bg.color
+	_tint_bg.color = Color(c.r, c.g, c.b, tint_bg_alpha_dragging)
 	_tween_scale(Vector2(drag_lift_scale, drag_lift_scale), scale_pop_duration, Tween.TRANS_ELASTIC)
 	drag_started.emit(self)
 
@@ -159,7 +238,9 @@ func force_end_drag(drop_global_pos: Vector2) -> void:
 	_end_drag(drop_global_pos)
 
 func _end_drag(drop_global_pos: Vector2) -> void:
-	add_theme_stylebox_override("panel", _rest_style)
+	_apply_rest_style()
+	var c := _tint_bg.color
+	_tint_bg.color = Color(c.r, c.g, c.b, tint_bg_alpha)
 	var tween_before_drop := _scale_tween
 	drag_ended.emit(self, drop_global_pos)
 	_spring_rotation_to_zero()

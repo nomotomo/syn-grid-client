@@ -1,10 +1,16 @@
 class_name StatsHud
 extends HBoxContainer
 
-# Bento stat strip: round / gold / life / triumph on fully opaque panels
-# (juice_manual.md section 1 bans translucency behind live numeric values).
-# Pure presentation - values come straight from GameState; scenes call
-# refresh() after any server response that mutates session state.
+# Bento stat strip: round / gold / life / triumph on fully opaque capsule
+# pills (juice_manual.md section 1 bans translucency behind live numeric
+# values). Pure presentation - values come straight from GameState; scenes
+# call refresh() after any server response that mutates session state.
+#
+# Neon Grimoire visual model:
+#   [ 4px accent bar | icon | title over value ]
+# The colored accent bar on the left of each pill matches the resource
+# identity (silver=round, gold, teal=hp, purple=triumph) - it stays visible
+# even when the number itself is unchanged, keeping the HUD alive.
 
 @export var life_low_threshold: int = 2
 @export var value_pop_scale: float = 1.3
@@ -21,13 +27,14 @@ extends HBoxContainer
 @onready var _triumph_icon: TextureRect = %TriumphIcon
 
 func _ready() -> void:
+	# Every HUD pill uses the L2 capsule style with a soft border glow so
+	# the eye reads them as "chrome buttons on a control panel" rather than
+	# generic cards.
 	for panel: PanelContainer in [_round_panel, _gold_panel, _life_panel, _triumph_panel]:
-		panel.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
-			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, 0, true))
+		panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, true))
 	_gold_value.add_theme_color_override("font_color", SynGridPalette.GOLD)
 	_triumph_value.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
-	# Kenney white stencils need a tint to read on dark panels.
-	_triumph_icon.self_modulate = SynGridPalette.ACCENT_TEAL
 	refresh()
 
 func refresh() -> void:

@@ -584,9 +584,16 @@ func _build_ring_particles(ring_radius: float, inner_radius: float, amount: int,
 		lifetime: float, vel_min: float, vel_max: float, scale_max: float,
 		from_color: Color, to_color: Color) -> CPUParticles2D:
 	var particles := CPUParticles2D.new()
-	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RING
-	particles.emission_ring_radius = ring_radius
-	particles.emission_ring_inner_radius = inner_radius
+	# Ring emission was added to CPUParticles2D in Godot 4.7. On 4.5 stable we
+	# fall back to SPHERE_SURFACE which emits from a circle boundary in 2D -
+	# visually identical to a thin ring at the sizes this project uses.
+	if "emission_ring_radius" in particles:
+		particles.set("emission_shape", 6)  # EMISSION_SHAPE_RING
+		particles.set("emission_ring_radius", ring_radius)
+		particles.set("emission_ring_inner_radius", inner_radius)
+	else:
+		particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE_SURFACE
+		particles.emission_sphere_radius = ring_radius
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.amount = amount

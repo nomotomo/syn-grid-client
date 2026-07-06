@@ -2,8 +2,18 @@
 
 [ext_resource type="Script" path="res://scripts/ui/ItemCard.gd" id="1"]
 
+; ItemCard - "Neon Grimoire" layout
+; ┌────────────────────┐  ← rounded 16px, tier-colored panel (built at runtime)
+; │ [50g]        [II]  │  ← cost chip (left, %BadgeLabel), tier chip (right, %TierLabel)
+; │                    │
+; │      [icon]        │  ← category tint radial bg + 64x64 pixel-art item
+; │                    │
+; │  ● 45  ◆ 12  ▲ 8   │  ← stat pips row
+; │      IRON SWORD    │  ← name label
+; └────────────────────┘
+
 [node name="ItemCard" type="PanelContainer"]
-custom_minimum_size = Vector2(150, 150)
+custom_minimum_size = Vector2(140, 168)
 script = ExtResource("1")
 
 [node name="Content" type="Control" parent="."]
@@ -11,46 +21,111 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; -- Category tint radial background wash (bottom layer) -----------------------
+[node name="TintBg" type="ColorRect" parent="Content"]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.45, 0.45, 0.5, 0.10)
+
+; -- Icon area (top 55%) -------------------------------------------------------
 [node name="IconRect" type="ColorRect" parent="Content"]
 unique_name_in_owner = true
 mouse_filter = 2
-anchor_left = 0.08
+anchor_left = 0.12
 anchor_top = 0.08
-anchor_right = 0.92
-anchor_bottom = 0.64
+anchor_right = 0.88
+anchor_bottom = 0.55
 color = Color(0.45, 0.45, 0.5, 1)
 
 [node name="IconTexture" type="TextureRect" parent="Content"]
 unique_name_in_owner = true
 visible = false
 mouse_filter = 2
-anchor_left = 0.08
+anchor_left = 0.12
 anchor_top = 0.08
-anchor_right = 0.92
-anchor_bottom = 0.64
+anchor_right = 0.88
+anchor_bottom = 0.55
 expand_mode = 1
 stretch_mode = 5
 
+; -- Stat pips row (mid-lower band) --------------------------------------------
+[node name="StatPipsRow" type="HBoxContainer" parent="Content"]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_left = 0.05
+anchor_top = 0.58
+anchor_right = 0.95
+anchor_bottom = 0.72
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="AtkPip" type="Label" parent="Content/StatPipsRow"]
+unique_name_in_owner = true
+theme_type_variation = &"StatPipLabel"
+mouse_filter = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="DefPip" type="Label" parent="Content/StatPipsRow"]
+unique_name_in_owner = true
+theme_type_variation = &"StatPipLabel"
+mouse_filter = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="SpdPip" type="Label" parent="Content/StatPipsRow"]
+unique_name_in_owner = true
+theme_type_variation = &"StatPipLabel"
+mouse_filter = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+; -- Name band (bottom 25%) ----------------------------------------------------
 [node name="NameLabel" type="Label" parent="Content"]
 unique_name_in_owner = true
 mouse_filter = 2
-anchor_top = 0.66
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_left = 0.04
+anchor_top = 0.74
+anchor_right = 0.96
+anchor_bottom = 0.96
 theme_type_variation = &"CardNameLabel"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 text = "Item"
 
+; -- Cost chip (top-left, shop only) -------------------------------------------
 [node name="BadgeLabel" type="Label" parent="Content"]
 unique_name_in_owner = true
 visible = false
 mouse_filter = 2
-anchor_left = 0.5
+anchor_left = 0.03
+anchor_right = 0.44
+anchor_top = 0.03
+anchor_bottom = 0.20
+theme_type_variation = &"BadgeLabel"
+horizontal_alignment = 0
+vertical_alignment = 1
+text = ""
+
+; -- Tier chip (top-right) -----------------------------------------------------
+[node name="TierLabel" type="Label" parent="Content"]
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+anchor_left = 0.56
 anchor_right = 0.97
 anchor_top = 0.03
-anchor_bottom = 0.2
+anchor_bottom = 0.20
 theme_type_variation = &"BadgeLabel"
 horizontal_alignment = 2
+vertical_alignment = 1
 text = ""

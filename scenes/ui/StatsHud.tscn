@@ -1,121 +1,168 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/StatsHud.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_gold.png" id="2_gold"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_life.png" id="3_life"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_triumph.png" id="4_triumph"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_round.png" id="2_round"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_gold.png" id="3_gold"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_life.png" id="4_life"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_triumph.png" id="5_triumph"]
 
 [node name="StatsHud" type="HBoxContainer"]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 script = ExtResource("1")
 
+; --- ROUND capsule ------------------------------------------------------------
 [node name="RoundPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="HBox" type="HBoxContainer" parent="RoundPanel"]
+[node name="Inner" type="MarginContainer" parent="RoundPanel"]
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 4
+
+[node name="HBox" type="HBoxContainer" parent="RoundPanel/Inner"]
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="VBox" type="VBoxContainer" parent="RoundPanel/HBox"]
+[node name="AccentBar" type="ColorRect" parent="RoundPanel/Inner/HBox"]
+custom_minimum_size = Vector2(4, 40)
+mouse_filter = 2
+color = Color(0.72, 0.77, 0.82, 1)
+
+[node name="RoundIcon" type="TextureRect" parent="RoundPanel/Inner/HBox"]
+custom_minimum_size = Vector2(28, 28)
+texture = ExtResource("2_round")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="RoundPanel/Inner/HBox"]
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Title" type="Label" parent="RoundPanel/HBox/VBox"]
+[node name="Title" type="Label" parent="RoundPanel/Inner/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "ROUND"
 
-[node name="RoundValue" type="Label" parent="RoundPanel/HBox/VBox"]
+[node name="RoundValue" type="Label" parent="RoundPanel/Inner/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "1"
 
+; --- GOLD capsule -------------------------------------------------------------
 [node name="GoldPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="HBox" type="HBoxContainer" parent="GoldPanel"]
+[node name="Inner" type="MarginContainer" parent="GoldPanel"]
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 4
+
+[node name="HBox" type="HBoxContainer" parent="GoldPanel/Inner"]
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="GoldIcon" type="TextureRect" parent="GoldPanel/HBox"]
-custom_minimum_size = Vector2(32, 32)
-texture = ExtResource("2_gold")
+[node name="AccentBar" type="ColorRect" parent="GoldPanel/Inner/HBox"]
+custom_minimum_size = Vector2(4, 40)
+mouse_filter = 2
+color = Color(0.95, 0.78, 0.29, 1)
+
+[node name="GoldIcon" type="TextureRect" parent="GoldPanel/Inner/HBox"]
+custom_minimum_size = Vector2(28, 28)
+texture = ExtResource("3_gold")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="VBox" type="VBoxContainer" parent="GoldPanel/HBox"]
+[node name="VBox" type="VBoxContainer" parent="GoldPanel/Inner/HBox"]
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Title" type="Label" parent="GoldPanel/HBox/VBox"]
+[node name="Title" type="Label" parent="GoldPanel/Inner/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "GOLD"
 
-[node name="GoldValue" type="Label" parent="GoldPanel/HBox/VBox"]
+[node name="GoldValue" type="Label" parent="GoldPanel/Inner/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "0"
 
+; --- LIFE capsule -------------------------------------------------------------
 [node name="LifePanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="HBox" type="HBoxContainer" parent="LifePanel"]
+[node name="Inner" type="MarginContainer" parent="LifePanel"]
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 4
+
+[node name="HBox" type="HBoxContainer" parent="LifePanel/Inner"]
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="LifeIcon" type="TextureRect" parent="LifePanel/HBox"]
-custom_minimum_size = Vector2(32, 32)
-texture = ExtResource("3_life")
+[node name="AccentBar" type="ColorRect" parent="LifePanel/Inner/HBox"]
+custom_minimum_size = Vector2(4, 40)
+mouse_filter = 2
+color = Color(0.0, 0.96, 0.83, 1)
+
+[node name="LifeIcon" type="TextureRect" parent="LifePanel/Inner/HBox"]
+custom_minimum_size = Vector2(28, 28)
+texture = ExtResource("4_life")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="VBox" type="VBoxContainer" parent="LifePanel/HBox"]
+[node name="VBox" type="VBoxContainer" parent="LifePanel/Inner/HBox"]
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Title" type="Label" parent="LifePanel/HBox/VBox"]
+[node name="Title" type="Label" parent="LifePanel/Inner/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "LIFE"
 
-[node name="LifeValue" type="Label" parent="LifePanel/HBox/VBox"]
+[node name="LifeValue" type="Label" parent="LifePanel/Inner/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "5"
 
+; --- TRIUMPH capsule ---------------------------------------------------------
 [node name="TriumphPanel" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="HBox" type="HBoxContainer" parent="TriumphPanel"]
+[node name="Inner" type="MarginContainer" parent="TriumphPanel"]
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 4
+
+[node name="HBox" type="HBoxContainer" parent="TriumphPanel/Inner"]
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="TriumphIcon" type="TextureRect" parent="TriumphPanel/HBox"]
+[node name="AccentBar" type="ColorRect" parent="TriumphPanel/Inner/HBox"]
+custom_minimum_size = Vector2(4, 40)
+mouse_filter = 2
+color = Color(0.48, 0.18, 0.75, 1)
+
+[node name="TriumphIcon" type="TextureRect" parent="TriumphPanel/Inner/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
-texture = ExtResource("4_triumph")
+custom_minimum_size = Vector2(28, 28)
+texture = ExtResource("5_triumph")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="VBox" type="VBoxContainer" parent="TriumphPanel/HBox"]
+[node name="VBox" type="VBoxContainer" parent="TriumphPanel/Inner/HBox"]
 size_flags_horizontal = 3
 alignment = 1
 
-[node name="Title" type="Label" parent="TriumphPanel/HBox/VBox"]
+[node name="Title" type="Label" parent="TriumphPanel/Inner/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "TRIUMPH"
 
-[node name="TriumphValue" type="Label" parent="TriumphPanel/HBox/VBox"]
+[node name="TriumphValue" type="Label" parent="TriumphPanel/Inner/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
-horizontal_alignment = 1
+horizontal_alignment = 0
 text = "0"
