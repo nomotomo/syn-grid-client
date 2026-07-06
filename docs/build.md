@@ -20,11 +20,7 @@ cp .env.example .env
 make setup-android    # installs android/build/ from export templates (headless)
 ```
 
-Edit `export_presets.cfg` (gitignored):
-
-- Set `keystore/debug`, `keystore/debug_user`, `keystore/debug_password` to your debug keystore (see section 3), or leave blank to use Godot Editor Settings defaults.
-
-Edit `.env` (gitignored) only when preparing release signing (section 4). Copy release keystore paths into `export_presets.cfg` `keystore/release*` fields as well — Godot reads signing paths from the preset, not from `.env`. The Makefile only validates `.env` before `make apk-release`.
+Edit `.env` (gitignored) with your debug and/or release keystore paths (sections 3–4). The Makefile syncs `.env` into `export_presets.cfg` immediately before export so Godot always reads the same credentials you validated — you do not need to edit keystore fields in the preset by hand.
 
 ## 3. Debug keystore (low-stakes, regenerable)
 
@@ -38,7 +34,15 @@ keytool -genkeypair -v \
   -dname "CN=Android Debug,O=Syn-Grid,C=US"
 ```
 
-Point `export_presets.cfg` at `keystores/debug.jks` (absolute path recommended). This identity is for local install-and-test only.
+Fill `.env` (absolute path recommended):
+
+```
+ANDROID_DEBUG_KEYSTORE_PATH=/path/to/keystores/debug.jks
+ANDROID_DEBUG_KEYSTORE_USER=androiddebugkey
+ANDROID_DEBUG_KEYSTORE_PASS=android
+```
+
+`make apk-debug` syncs these into `export_presets.cfg` before invoking Godot. If the debug env vars are unset, Godot falls back to Editor Settings defaults.
 
 ## 4. Release keystore (permanent Play Store identity)
 
@@ -62,7 +66,7 @@ KEYSTORE_ALIAS=syncgrid
 KEYSTORE_ALIAS_PASS=...
 ```
 
-Mirror those values in `export_presets.cfg` `keystore/release*` fields.
+`make apk-release` validates `.env`, then runs `tools/sync_export_keystore.py --release` to write `keystore/release*` into `export_presets.cfg` before Godot exports.
 
 ## 5. Running the first build
 
@@ -82,17 +86,15 @@ ls -lh export/syn-grid-debug.apk
 aapt dump badging export/syn-grid-debug.apk | head -5
 ```
 
-**Recorded measurement (2026-07-06, arm64-v8a only, debug APK):**
+**Recorded measurement (2026-07-06, arm64-v8a only, debug APK, `compress_native_libraries=true`):**
 
 | Metric | Value |
 |---|---|
-| File size | **78 MB** |
+| File size | **31 MB** |
 | Budget | 50 MB |
-| Status | **Over budget** |
+| Status | **Pass** |
 
-Primary contributors: Godot Android runtime library (~76 MB uncompressed per ABI) and uncompressed WAV SFX/BGM from C9. The preset excludes dev-only paths (`graphify-out/`, `docs/`, `tools/`, etc.) and ships **arm64-v8a only** to avoid a second native ABI.
-
-**OGG migration (deferred):** Per C11 scope decision, WAV assets were not converted in this phase. A follow-up issue should track WAV → Ogg Vorbis migration (requires an external encoder; Godot's WAV importer does not produce Vorbis). Re-run this audit after that migration or after a release (`make apk-release`) export.
+The preset enables `gradle_build/compress_native_libraries=true`, which stores native libraries compressed in the APK (Android extracts at install). Without this flag the debug APK was ~78 MB because `libgodot_android.so` alone is ~76 MB uncompressed. WAV SFX/BGM from C9 total ~7 MB and were not converted to Ogg Vorbis — compression of native libs was sufficient to meet the 50 MB budget. The preset also excludes dev-only paths (`graphify-out/`, `docs/`, `tools/`, etc.) and ships **arm64-v8a only**.
 
 ## 7. Troubleshooting
 
@@ -104,7 +106,8 @@ Primary contributors: Godot Android runtime library (~76 MB uncompressed per ABI
 | `Unsupported class file major version` | Point Godot Java SDK to **JDK 17**, not JDK 21+. |
 | `cannot connect to daemon at tcp:5037` | Harmless during headless export if `adb` is not running; ignore unless deploying to a device. |
 | `KEYSTORE_PATH not set` / `Keystore not found` | `make apk-release` fail-closed — fill `.env` and verify the keystore file exists before retrying. |
-| APK over 50 MB | See section 6; plan WAV → OGG follow-up or audit release build size. |
+| `Code Signing: Could not find release keystore` | `.env` was filled but not synced — re-run `make apk-release` (sync runs automatically) or run `python3 tools/sync_export_keystore.py --release` manually. |
+| APK over 50 MB | Ensure `gradle_build/compress_native_libraries=true` in `export_presets.cfg` (set in `.example`). Re-run size audit from section 6. |
 
 ## Makefile targets
 
@@ -135,4 +138,4 @@ Walk before tagging any release APK:
 | 11 | `@export` on tunables | Pass |
 | 12 | Fatal LPF sweep | Pass (`lpf_cleared=true` harness) |
 | 13 | Eliminated end-game screen | Pass (C7) |
-| 14 | APK under 50 MB | **Fail** (78 MB debug; OGG migration deferred) |
+| 14 | APK under 50 MB | **Pass** (31 MB debug with native lib compression) |
