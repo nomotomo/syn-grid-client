@@ -80,10 +80,7 @@ func _ready() -> void:
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
 	_shop_caption.text = "REQUISITION - ROUND %d - TAP TO BUY" % GameState.current_round
 
-	grid_columns = GameState.grid_columns
-	grid_rows = GameState.grid_rows
-	_layout_screen()
-	_build_cells()
+	_apply_grid_dimensions_from_state()
 	_render_initial_state()
 	_stats_hud.refresh()
 
@@ -160,6 +157,21 @@ func _layout_screen() -> void:
 
 	_start_match_button.position = Vector2(40.0, size.y * start_button_top_ratio)
 	_start_match_button.size = Vector2(size.x - 80.0, 140.0)
+
+func _apply_grid_dimensions_from_state() -> void:
+	grid_columns = GameState.grid_columns
+	grid_rows = GameState.grid_rows
+	_layout_screen()
+	_build_cells()
+
+func _maybe_rebuild_grid_from_state() -> void:
+	if grid_columns == GameState.grid_columns and grid_rows == GameState.grid_rows:
+		return
+	_clear_synergy_borders()
+	_known_synergy_keys.clear()
+	_apply_grid_dimensions_from_state()
+	_render_initial_state()
+	_refresh_start_button()
 
 func _build_cells() -> void:
 	_clear_grid_cells()
@@ -393,6 +405,7 @@ func _on_purchase_item_completed(data: Dictionary) -> void:
 
 	GameState.sync_bench_from_server(bench)
 	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
+	_maybe_rebuild_grid_from_state()
 	_render_bench()
 	_stats_hud.refresh()
 	_update_affordability()
@@ -564,6 +577,7 @@ func _on_sell_item_completed(data: Dictionary) -> void:
 	GameState.gold = int(data.get("new_balance", GameState.gold))
 	GameState.sync_bench_from_server(data.get("updated_grid", {}).get("bench_reserve", []))
 	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
+	_maybe_rebuild_grid_from_state()
 	_stats_hud.refresh()
 	_update_affordability()
 	_status_label.text = "RECYCLED +%dG" % credited

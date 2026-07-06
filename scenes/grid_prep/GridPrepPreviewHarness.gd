@@ -68,14 +68,14 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	for _i in 40:
 		await get_tree().process_frame
 	# Drive two real placements through the scene's drag lifecycle.
-	# Place multi-cell spear first while the full bench row is still populated.
-	_auto_place(5, Vector2i(0, 0))
+	# Place multi-cell spear first, then adjacent 1x1 weapons for synergy check.
+	_auto_place_item("preview-6", Vector2i(0, 0))
 	for _i in 20:
 		await get_tree().process_frame
-	_auto_place(0, Vector2i(2, 1))
+	_auto_place_item("preview-1", Vector2i(2, 1))
 	for _i in 20:
 		await get_tree().process_frame
-	_auto_place(1, Vector2i(3, 1))
+	_auto_place_item("preview-2", Vector2i(3, 1))
 	# No Go server in this harness, so exercise the synergy glow shader +
 	# chime path by injecting a validate_grid response shaped like the real one.
 	_grid._on_validate_grid_completed({"synergies": [
@@ -139,6 +139,21 @@ func _run_live_verify(screenshot_path: String) -> void:
 		_grid.get_node("%ShopRow").get_child_count(),
 		_grid.get_node("%StatusLabel").text])
 	_save_and_quit(screenshot_path)
+
+func _auto_place_item(item_id: String, cell_coords: Vector2i) -> void:
+	var bench_row: HBoxContainer = _grid.get_node("%BenchRow")
+	var card: ItemCard = null
+	for child in bench_row.get_children():
+		var candidate := child as ItemCard
+		if candidate != null and candidate.get("_item_data").get("item_id", "") == item_id:
+			card = candidate
+			break
+	if card == null:
+		push_error("auto-verify: no bench card for item_id %s" % item_id)
+		return
+	var cell: GridCell = _grid._cell_at(cell_coords.x, cell_coords.y)
+	_grid._on_card_drag_started(card)
+	_grid._on_card_drag_ended(card, cell.get_global_rect().get_center())
 
 func _auto_place(bench_idx: int, cell_coords: Vector2i) -> void:
 	var bench_row: HBoxContainer = _grid.get_node("%BenchRow")
