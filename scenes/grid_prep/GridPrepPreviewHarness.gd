@@ -11,11 +11,12 @@ extends Control
 #       real round grant + shop roll, buys the cheapest slot, places it.
 
 const SAMPLE_BENCH_ITEMS: Array[Dictionary] = [
-	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "placement_coords": null},
-	{"item_id": "preview-2", "name": "Longbow", "item_type": "WEAPON", "weapon_category": "RANGED", "level": 1, "placement_coords": null},
-	{"item_id": "preview-3", "name": "Arcane Staff", "item_type": "WEAPON", "weapon_category": "ARCANE", "level": 2, "placement_coords": null},
-	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "placement_coords": null},
-	{"item_id": "preview-5", "name": "Healing Draught", "item_type": "POTION", "weapon_category": "", "level": 1, "placement_coords": null},
+	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-2", "name": "Longbow", "item_type": "WEAPON", "weapon_category": "RANGED", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-3", "name": "Arcane Staff", "item_type": "WEAPON", "weapon_category": "ARCANE", "level": 2, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-5", "name": "Healing Draught", "item_type": "POTION", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-6", "name": "Hunting Spear", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 2, "dimensions": {"width": 1, "height": 2}, "placement_coords": null},
 ]
 
 const SAMPLE_SHOP_SLOTS: Array[Dictionary] = [
@@ -33,7 +34,9 @@ func _ready() -> void:
 		return
 
 	GameState.player_id = "preview-player"
-	GameState.current_round = 3
+	GameState.current_round = 4
+	GameState.grid_columns = 5
+	GameState.grid_rows = 5
 	GameState.gold = 7
 	GameState.life_points = 4
 	GameState.triumph_count = 2
@@ -65,10 +68,14 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	for _i in 40:
 		await get_tree().process_frame
 	# Drive two real placements through the scene's drag lifecycle.
-	_auto_place(0, Vector2i(1, 1))
+	# Place multi-cell spear first while the full bench row is still populated.
+	_auto_place(5, Vector2i(0, 0))
 	for _i in 20:
 		await get_tree().process_frame
 	_auto_place(0, Vector2i(2, 1))
+	for _i in 20:
+		await get_tree().process_frame
+	_auto_place(1, Vector2i(3, 1))
 	# No Go server in this harness, so exercise the synergy glow shader +
 	# chime path by injecting a validate_grid response shaped like the real one.
 	_grid._on_validate_grid_completed({"synergies": [

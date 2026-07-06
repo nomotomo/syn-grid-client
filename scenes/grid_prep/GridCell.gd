@@ -1,18 +1,17 @@
 class_name GridCell
 extends PanelContainer
 
-# One slot in the 4x4 placement grid. Holds at most one ItemCard child -
-# reparenting a card in/out is all GridPrepScene needs to "snap" it, since
-# PanelContainer's single-child fill behavior sizes/positions it automatically.
-# Adjoining cells' borders coincide at zero separation, giving the tech-grid
-# hairline look for free with no separate drawing code.
+# One slot in the deployment grid. The anchor cell for a multi-cell item parents
+# the ItemCard (sized to span its footprint); every cell in the footprint is
+# marked occupied via set_occupied() so drop targeting treats the whole rect as
+# full. PanelContainer single-child fill sizes the anchor card; overflow covers
+# adjoining cells visually.
 #
 # Neon Grimoire additions:
 #   * Empty cells render a faint "+" glyph at 10% opacity so the socket reads
 #     as "ready to receive" even before a drag starts.
-#   * highlight() now accepts a `valid: bool`. Valid hover pulses teal
-#     (previous behaviour); invalid hover pulses DANGER crimson so the
-#     player never wastes a drop attempt.
+#   * highlight() accepts a `valid: bool`. Valid hover pulses teal; invalid
+#     hover pulses DANGER crimson so the player never wastes a drop attempt.
 
 @export var pulse_period: float = 0.5
 @export var pulse_brightness: float = 1.45
@@ -21,6 +20,7 @@ extends PanelContainer
 
 var grid_x: int = 0
 var grid_y: int = 0
+var occupied: bool = false
 
 var _pulse_tween: Tween = null
 var _empty_glyph: Label = null
@@ -49,6 +49,13 @@ func setup(x: int, y: int, cell_size: Vector2) -> void:
 	grid_x = x
 	grid_y = y
 	custom_minimum_size = cell_size
+
+func set_occupied(on: bool) -> void:
+	occupied = on
+	_refresh_empty_glyph()
+
+func is_free() -> bool:
+	return not occupied
 
 func has_card() -> bool:
 	# The empty-plus glyph is a Label child, so count only ItemCard descendants.
@@ -106,4 +113,4 @@ func _on_child_changed(_node: Node) -> void:
 func _refresh_empty_glyph() -> void:
 	if _empty_glyph == null:
 		return
-	_empty_glyph.visible = not has_card()
+	_empty_glyph.visible = is_free()
