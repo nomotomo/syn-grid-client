@@ -22,6 +22,11 @@ var gold: int = 0
 var life_points: int = 5
 var triumph_count: int = 0
 
+# Deployment grid size (authoritative from server grid_dimensions; export defaults
+# in GridPrepScene are harness/offline fallbacks only).
+var grid_columns: int = 4
+var grid_rows: int = 4
+
 # Item state
 var equipped_items: Array[Dictionary] = []
 var bench_items: Array[Dictionary] = []
@@ -96,6 +101,7 @@ func hydrate_from_grid(grid: Dictionary) -> void:
 	triumph_count = int(grid.get("triumph_count", triumph_count))
 	gold = int(grid.get("gold_balance", gold))
 	current_round = new_round
+	sync_grid_dimensions(grid)
 	var equipped: Array = grid.get("equipped_items", [])
 	var bench: Array = grid.get("bench_reserve", [])
 	equipped_items.assign(equipped)
@@ -127,6 +133,19 @@ func _my_player_state(finalize_response: Dictionary) -> Dictionary:
 		return defender
 	return attacker if not attacker.is_empty() else defender
 
+# Reads grid_dimensions from any Grid-shaped payload. No client-side round math.
+func sync_grid_dimensions(grid: Dictionary) -> void:
+	var dims: Dictionary = grid.get("grid_dimensions", {})
+	if dims.is_empty():
+		return
+	grid_columns = int(dims.get("columns", grid_columns))
+	grid_rows = int(dims.get("rows", grid_rows))
+
+# Canonical unrotated footprint from server item data (api_contract.md).
+func item_footprint(item: Dictionary) -> Vector2i:
+	var dims: Dictionary = item.get("dimensions", {})
+	return Vector2i(int(dims.get("width", 1)), int(dims.get("height", 1)))
+
 func sync_bench_from_server(server_bench: Array) -> void:
 	# Server bench is authoritative, but exclude items already placed locally.
 	var placed_ids: Dictionary = {}
@@ -139,14 +158,14 @@ func sync_bench_from_server(server_bench: Array) -> void:
 
 # Packages current session state into the Grid JSON shape docs/api_contract.md
 # expects for validate_grid / start_match. Pure data-shaping, no game logic.
-func to_grid_payload(columns: int, rows: int) -> Dictionary:
+func to_grid_payload() -> Dictionary:
 	return {
 		"player_id": player_id,
 		"current_round": current_round,
 		"life_points": life_points,
 		"triumph_count": triumph_count,
 		"gold_balance": gold,
-		"grid_dimensions": {"columns": columns, "rows": rows},
+		"grid_dimensions": {"columns": grid_columns, "rows": grid_rows},
 		"equipped_items": equipped_items,
 		"bench_reserve": bench_items,
 	}

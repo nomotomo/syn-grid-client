@@ -71,14 +71,14 @@ func _run_all() -> void:
 	item["placement_coords"] = {"x": 0, "y": 0}
 	GameState.equipped_items.append(item)
 	GameState.bench_items.clear()
-	var validate := await _call(ApiClient.validate_grid.bind(GameState.to_grid_payload(4, 4)),
+	var validate := await _call(ApiClient.validate_grid.bind(GameState.to_grid_payload()),
 		ApiClient.validate_grid_completed, ApiClient.validate_grid_failed)
 	if not _require(validate, "validate_grid"):
 		return
 	_check(validate.data.get("synergies", []) is Array, "validate_grid returns synergies array")
 
 	# 5. Start a match (bot ghosts are seeded on server startup)
-	var match_resp := await _call(ApiClient.start_match.bind(GameState.to_grid_payload(4, 4)),
+	var match_resp := await _call(ApiClient.start_match.bind(GameState.to_grid_payload()),
 		ApiClient.start_match_completed, ApiClient.start_match_failed)
 	if not _require(match_resp, "start_match"):
 		return

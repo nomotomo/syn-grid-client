@@ -18,9 +18,10 @@ const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatRepla
 @export var grid_rows: int = 4
 @export var shop_caption_ratio: float = 0.11
 @export var grid_top_margin_ratio: float = 0.25
-@export var bench_top_margin_ratio: float = 0.625
-@export var recycler_top_ratio: float = 0.73
-@export var start_button_top_ratio: float = 0.80
+@export var section_gap: float = 24.0
+@export var recycler_height: float = 100.0
+@export var start_button_height: float = 140.0
+@export var min_layout_cell_size: float = 72.0
 @export var synergy_strip_width: float = 20.0
 @export var caption_gap: float = 44.0
 @export var snap_particle_lifetime: float = 0.3
@@ -55,7 +56,10 @@ var _known_synergy_keys: Dictionary = {}
 
 var _dragging_card: ItemCard = null
 var _dragging_origin: Node = null
-var _highlighted_cell: GridCell = null
+var _highlighted_cells: Array[GridCell] = []
+var _highlight_anchor: GridCell = null
+var _highlight_valid: bool = true
+var _occupancy: Dictionary = {}
 
 var _start_button_was_ready: bool = false
 
@@ -66,6 +70,7 @@ var _known_bench_ids: Dictionary = {}
 var _bench_dirty: bool = false
 var _recycler_rest_style: StyleBoxFlat
 var _recycler_hot_style: StyleBoxFlat
+var _layout_cell_size: Vector2 = Vector2(150, 150)
 
 func _ready() -> void:
 	theme = ThemeBuilder.get_theme()
@@ -77,8 +82,7 @@ func _ready() -> void:
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
 	_shop_caption.text = "REQUISITION - ROUND %d - TAP TO BUY" % GameState.current_round
 
-	_layout_screen()
-	_build_cells()
+	_apply_grid_dimensions_from_state()
 	_render_initial_state()
 	_stats_hud.refresh()
 
@@ -109,9 +113,27 @@ func _ready() -> void:
 # Cells are sized card + panel margins so occupied and empty cells stay the
 # same size and the grid never shifts as items land.
 func _cell_outer_size() -> Vector2:
-	return cell_size + Vector2.ONE * (ThemeBuilder.PANEL_CONTENT_MARGIN * 2.0)
+	return _layout_cell_size + Vector2.ONE * (ThemeBuilder.PANEL_CONTENT_MARGIN * 2.0)
+
+func _bottom_section_height(bench_cell_h: float) -> float:
+	return section_gap + caption_gap + bench_cell_h + section_gap \
+		+ recycler_height + section_gap + start_button_height
+
+func _compute_layout_cell_size() -> Vector2:
+	var grid_top := size.y * grid_top_margin_ratio
+	var bottom_h := _bottom_section_height(cell_size.y)
+	var avail_h := size.y - grid_top - caption_gap - bottom_h
+	var avail_w := size.x - 48.0
+	var max_outer_h := avail_h / maxf(grid_rows, 1)
+	var max_outer_w := avail_w / maxf(grid_columns, 1)
+	var max_outer := minf(max_outer_h, max_outer_w)
+	var export_outer := cell_size.x + ThemeBuilder.PANEL_CONTENT_MARGIN * 2.0
+	var outer := minf(max_outer, export_outer)
+	var inner := maxf(outer - ThemeBuilder.PANEL_CONTENT_MARGIN * 2.0, min_layout_cell_size)
+	return Vector2(inner, inner)
 
 func _layout_screen() -> void:
+	_layout_cell_size = _compute_layout_cell_size()
 	# Shop strip between the stats HUD and the grid.
 	var shop_caption_top := size.y * shop_caption_ratio
 	_shop_caption.position = Vector2(40.0, shop_caption_top)
@@ -131,7 +153,9 @@ func _layout_screen() -> void:
 	_grid_caption.position = Vector2(_grid_area.position.x, _grid_area.position.y - caption_gap)
 	_grid_caption.size = Vector2(grid_total.x, caption_gap)
 
-	var bench_top := size.y * bench_top_margin_ratio
+	var grid_bottom := _grid_area.position.y + _grid_area.size.y
+	var bench_caption_top := grid_bottom + section_gap
+	var bench_top := bench_caption_top + caption_gap - 12.0
 	_bench_row.anchor_left = 0.0
 	_bench_row.anchor_right = 1.0
 	_bench_row.anchor_top = 0.0
@@ -139,24 +163,42 @@ func _layout_screen() -> void:
 	_bench_row.offset_left = 40.0
 	_bench_row.offset_right = -40.0
 	_bench_row.offset_top = bench_top
-	_bench_row.offset_bottom = bench_top + cell_size.y
+	_bench_row.offset_bottom = bench_top + _layout_cell_size.y
 
 	# Bento backdrop: the bench sits on its own base-elevation panel so it
 	# reads as a separate zone without any harsh divider line (contract s.1).
-	_bench_panel.position = Vector2(24.0, bench_top - caption_gap - 12.0)
-	_bench_panel.size = Vector2(size.x - 48.0, cell_size.y + caption_gap + 36.0)
+	_bench_panel.position = Vector2(24.0, bench_caption_top - 12.0)
+	_bench_panel.size = Vector2(size.x - 48.0, _layout_cell_size.y + caption_gap + 36.0)
 	_bench_panel.add_theme_stylebox_override("panel",
 		ThemeBuilder.build_panel_style(SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG))
-	_bench_caption.position = Vector2(40.0, bench_top - caption_gap)
+	_bench_caption.position = Vector2(40.0, bench_caption_top)
 	_bench_caption.size = Vector2(size.x - 80.0, caption_gap - 12.0)
 
-	_recycler_panel.position = Vector2(24.0, size.y * recycler_top_ratio)
-	_recycler_panel.size = Vector2(size.x - 48.0, 100.0)
+	var recycler_top := bench_top + _layout_cell_size.y + section_gap
+	_recycler_panel.position = Vector2(24.0, recycler_top)
+	_recycler_panel.size = Vector2(size.x - 48.0, recycler_height)
 
-	_start_match_button.position = Vector2(40.0, size.y * start_button_top_ratio)
-	_start_match_button.size = Vector2(size.x - 80.0, 140.0)
+	var start_top := recycler_top + recycler_height + section_gap
+	_start_match_button.position = Vector2(40.0, start_top)
+	_start_match_button.size = Vector2(size.x - 80.0, start_button_height)
+
+func _apply_grid_dimensions_from_state() -> void:
+	grid_columns = GameState.grid_columns
+	grid_rows = GameState.grid_rows
+	_layout_screen()
+	_build_cells()
+
+func _maybe_rebuild_grid_from_state() -> void:
+	if grid_columns == GameState.grid_columns and grid_rows == GameState.grid_rows:
+		return
+	_clear_synergy_borders()
+	_known_synergy_keys.clear()
+	_apply_grid_dimensions_from_state()
+	_render_initial_state()
+	_refresh_start_button()
 
 func _build_cells() -> void:
+	_clear_grid_cells()
 	for y in grid_rows:
 		for x in grid_columns:
 			var cell := GridCell.new()
@@ -197,6 +239,82 @@ func _build_coord_labels() -> void:
 		row_label.size = Vector2(20.0, outer.y)
 		_grid_area.add_child(row_label)
 
+func _clear_grid_cells() -> void:
+	for cell in _cells:
+		cell.queue_free()
+	_cells.clear()
+	_occupancy.clear()
+	_cards_by_item_id.clear()
+
+func _occ_key(x: int, y: int) -> String:
+	return "%d,%d" % [x, y]
+
+func _footprint_fits(anchor_x: int, anchor_y: int, item: Dictionary,
+		exclude_item_id: String = "") -> bool:
+	var footprint := GameState.item_footprint(item)
+	if anchor_x < 0 or anchor_y < 0:
+		return false
+	if anchor_x + footprint.x > grid_columns or anchor_y + footprint.y > grid_rows:
+		return false
+	for dx in footprint.x:
+		for dy in footprint.y:
+			var occupant: String = _occupancy.get(_occ_key(anchor_x + dx, anchor_y + dy), "")
+			if occupant != "" and occupant != exclude_item_id:
+				return false
+	return true
+
+func _claim_footprint(anchor_x: int, anchor_y: int, item_id: String, footprint: Vector2i) -> void:
+	for dx in footprint.x:
+		for dy in footprint.y:
+			var key := _occ_key(anchor_x + dx, anchor_y + dy)
+			_occupancy[key] = item_id
+			var cell := _cell_at(anchor_x + dx, anchor_y + dy)
+			if cell != null:
+				cell.set_occupied(true)
+
+func _release_footprint(anchor_x: int, anchor_y: int, footprint: Vector2i) -> void:
+	for dx in footprint.x:
+		for dy in footprint.y:
+			var key := _occ_key(anchor_x + dx, anchor_y + dy)
+			_occupancy.erase(key)
+			var cell := _cell_at(anchor_x + dx, anchor_y + dy)
+			if cell != null:
+				cell.set_occupied(false)
+
+func _apply_footprint_visual(card: ItemCard, footprint: Vector2i) -> void:
+	card.custom_minimum_size = _layout_cell_size * Vector2(footprint.x, footprint.y)
+
+func _reset_footprint_visual(card: ItemCard) -> void:
+	card.custom_minimum_size = card.card_size
+
+func _footprint_rect(anchor: GridCell, footprint: Vector2i) -> Rect2:
+	var top_left := anchor.get_global_rect().position
+	var outer := _cell_outer_size()
+	return Rect2(top_left, outer * Vector2(footprint.x, footprint.y))
+
+func _clear_drop_highlight() -> void:
+	for cell in _highlighted_cells:
+		cell.highlight(false)
+	_highlighted_cells.clear()
+
+func _set_drop_highlight(anchor: GridCell, item: Dictionary, valid: bool = true) -> void:
+	_clear_drop_highlight()
+	if anchor == null:
+		return
+	var footprint := GameState.item_footprint(item)
+	for dx in footprint.x:
+		for dy in footprint.y:
+			var cell := _cell_at(anchor.grid_x + dx, anchor.grid_y + dy)
+			if cell != null:
+				cell.highlight(true, valid)
+				_highlighted_cells.append(cell)
+
+func _anchor_coords_for_item(item: Dictionary) -> Vector2i:
+	var coords: Variant = item.get("placement_coords")
+	if coords == null:
+		return Vector2i(-1, -1)
+	return Vector2i(int(coords.get("x", 0)), int(coords.get("y", 0)))
+
 func _cell_at(x: int, y: int) -> GridCell:
 	if x < 0 or x >= grid_columns or y < 0 or y >= grid_rows:
 		return null
@@ -205,13 +323,18 @@ func _cell_at(x: int, y: int) -> GridCell:
 func _render_initial_state() -> void:
 	_render_bench()
 	for item in GameState.equipped_items:
-		var coords = item.get("placement_coords")
-		if coords == null:
+		var anchor := _anchor_coords_for_item(item)
+		if anchor.x < 0:
 			continue
-		var cell := _cell_at(int(coords.get("x", 0)), int(coords.get("y", 0)))
-		if cell == null or cell.has_card():
+		var cell := _cell_at(anchor.x, anchor.y)
+		if cell == null or not cell.is_free():
 			continue
+		if not _footprint_fits(anchor.x, anchor.y, item):
+			continue
+		var footprint := GameState.item_footprint(item)
 		var card := _spawn_card(item, cell)
+		_apply_footprint_visual(card, footprint)
+		_claim_footprint(anchor.x, anchor.y, item.get("item_id", ""), footprint)
 		_cards_by_item_id[item.get("item_id", "")] = card
 
 func _spawn_card(item: Dictionary, parent: Node) -> ItemCard:
@@ -305,6 +428,8 @@ func _on_purchase_item_completed(data: Dictionary) -> void:
 			break
 
 	GameState.sync_bench_from_server(bench)
+	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
+	_maybe_rebuild_grid_from_state()
 	_render_bench()
 	_stats_hud.refresh()
 	_update_affordability()
@@ -356,12 +481,13 @@ func _force_resolve_drag(card: ItemCard) -> void:
 	var drop_pos := card.global_position + card.size / 2.0
 	card.force_end_drag(drop_pos)
 
-func _nearest_empty_cell(drop_pos: Vector2) -> GridCell:
-	var snap_radius := cell_size.x * 0.5
+func _nearest_valid_anchor(drop_pos: Vector2, item: Dictionary,
+		exclude_item_id: String = "") -> GridCell:
+	var snap_radius := _layout_cell_size.x * 0.5
 	var best: GridCell = null
 	var best_dist := snap_radius
 	for cell in _cells:
-		if cell.has_card():
+		if not _footprint_fits(cell.grid_x, cell.grid_y, item, exclude_item_id):
 			continue
 		var center := cell.get_global_rect().get_center()
 		var dist := drop_pos.distance_to(center)
@@ -375,6 +501,10 @@ func _on_card_drag_started(card: ItemCard) -> void:
 		_force_resolve_drag(_dragging_card)
 	_dragging_card = card
 	_dragging_origin = card.get_parent()
+	if _dragging_origin is GridCell:
+		var item: Dictionary = card.get("_item_data")
+		var anchor := _anchor_coords_for_item(item)
+		_release_footprint(anchor.x, anchor.y, GameState.item_footprint(item))
 	var pos := card.global_position
 	_dragging_origin.remove_child(card)
 	_drag_layer.add_child(card)
@@ -387,28 +517,34 @@ func _process(_delta: float) -> void:
 		return
 	if _dragging_card == null:
 		return
+	var item: Dictionary = _dragging_card.get("_item_data")
+	var exclude_id := ""
+	if _dragging_origin is GridCell:
+		exclude_id = String(item.get("item_id", ""))
 	var center := _dragging_card.global_position + _dragging_card.size / 2.0
-	var hover: GridCell = null
+	var pointer_cell: GridCell = null
 	for cell in _cells:
 		if cell.get_global_rect().has_point(center):
-			hover = cell
+			pointer_cell = cell
 			break
-	if hover != _highlighted_cell:
-		if _highlighted_cell != null:
-			_highlighted_cell.highlight(false)
-		if hover != null:
-			# Valid drop = empty cell; invalid = cell already occupied. The cell
-			# pulses DANGER on invalid so the player never wastes a release.
-			hover.highlight(true, not hover.has_card())
-		_highlighted_cell = hover
+	var valid_anchor := _nearest_valid_anchor(center, item, exclude_id)
+	var anchor := valid_anchor if valid_anchor != null else pointer_cell
+	var valid := valid_anchor != null
+	if anchor != _highlight_anchor or valid != _highlight_valid:
+		_highlight_anchor = anchor
+		_highlight_valid = valid
+		if anchor == null:
+			_clear_drop_highlight()
+		else:
+			_set_drop_highlight(anchor, item, valid)
 	_recycler_panel.add_theme_stylebox_override("panel",
 		_recycler_hot_style if _recycler_panel.get_global_rect().has_point(center)
 		else _recycler_rest_style)
 
 func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
-	if _highlighted_cell != null:
-		_highlighted_cell.highlight(false)
-		_highlighted_cell = null
+	_clear_drop_highlight()
+	_highlight_anchor = null
+	_highlight_valid = true
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
 
 	var origin := _dragging_origin
@@ -424,10 +560,14 @@ func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 			_return_card_to(card, origin)
 			_status_label.text = "ONLY BENCH ITEMS CAN BE RECYCLED"
 	else:
-		var target_cell := _nearest_empty_cell(drop_pos)
-		if target_cell != null:
+		var item: Dictionary = card.get("_item_data")
+		var exclude_id := ""
+		if origin is GridCell:
+			exclude_id = String(item.get("item_id", ""))
+		var target_cell := _nearest_valid_anchor(drop_pos, item, exclude_id)
+		if target_cell != null and _footprint_fits(target_cell.grid_x, target_cell.grid_y, item, exclude_id):
 			_place_card(card, target_cell)
-		elif target_cell == null and origin is GridCell and _bench_row.get_global_rect().has_point(drop_pos):
+		elif origin is GridCell and _bench_row.get_global_rect().has_point(drop_pos):
 			_unplace_card(card)
 		else:
 			_return_card_to(card, origin)
@@ -439,6 +579,14 @@ func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 func _return_card_to(card: ItemCard, origin: Node) -> void:
 	_drag_layer.remove_child(card)
 	origin.add_child(card)
+	if origin is GridCell:
+		var item: Dictionary = card.get("_item_data")
+		var anchor := _anchor_coords_for_item(item)
+		var footprint := GameState.item_footprint(item)
+		_apply_footprint_visual(card, footprint)
+		_claim_footprint(anchor.x, anchor.y, item.get("item_id", ""), footprint)
+	elif origin == _bench_row:
+		_reset_footprint_visual(card)
 
 # -- Sell flow --
 
@@ -452,6 +600,8 @@ func _on_sell_item_completed(data: Dictionary) -> void:
 	var credited := int(data.get("new_balance", GameState.gold)) - GameState.gold
 	GameState.gold = int(data.get("new_balance", GameState.gold))
 	GameState.sync_bench_from_server(data.get("updated_grid", {}).get("bench_reserve", []))
+	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
+	_maybe_rebuild_grid_from_state()
 	_stats_hud.refresh()
 	_update_affordability()
 	_status_label.text = "RECYCLED +%dG" % credited
@@ -519,7 +669,7 @@ func _on_start_match_pressed() -> void:
 	_match_in_flight = true
 	_refresh_start_button()
 	_status_label.text = "SEARCHING FOR OPPONENT..."
-	ApiClient.start_match(GameState.to_grid_payload(grid_columns, grid_rows))
+	ApiClient.start_match(GameState.to_grid_payload())
 
 func _on_start_match_completed(data: Dictionary) -> void:
 	_match_in_flight = false
@@ -540,33 +690,40 @@ func _on_start_match_failed(_code: int, reason: String) -> void:
 # -- Placement (client-owned; see header comment) --
 
 func _place_card(card: ItemCard, cell: GridCell) -> void:
+	var item: Dictionary = card.get("_item_data")
 	_drag_layer.remove_child(card)
 	cell.add_child(card)
+	var footprint := GameState.item_footprint(item)
+	_apply_footprint_visual(card, footprint)
+	_claim_footprint(cell.grid_x, cell.grid_y, item.get("item_id", ""), footprint)
 
-	var item: Dictionary = card.get("_item_data")
 	_move_item_to_equipped(item, cell.grid_x, cell.grid_y)
 	_cards_by_item_id[item.get("item_id", "")] = card
 
 	card.play_snap_bounce()
-	_spawn_snap_particles(cell)
+	_spawn_snap_particles(cell, footprint)
 	AudioManager.play_grid_snap()
 
 	_status_label.text = "placed %s at (%d, %d)" % [item.get("name", "?"), cell.grid_x, cell.grid_y]
 	_refresh_start_button()
-	ApiClient.validate_grid(GameState.to_grid_payload(grid_columns, grid_rows))
+	ApiClient.validate_grid(GameState.to_grid_payload())
 
 func _unplace_card(card: ItemCard) -> void:
 	_drag_layer.remove_child(card)
 	_bench_row.add_child(card)
 
 	var item: Dictionary = card.get("_item_data")
+	var anchor := _anchor_coords_for_item(item)
+	var footprint := GameState.item_footprint(item)
+	_release_footprint(anchor.x, anchor.y, footprint)
+	_reset_footprint_visual(card)
 	_move_item_to_bench(item)
 	_cards_by_item_id.erase(item.get("item_id", ""))
 	_known_bench_ids[item.get("item_id", "")] = true
 
 	_status_label.text = "returned %s to bench" % item.get("name", "?")
 	_refresh_start_button()
-	ApiClient.validate_grid(GameState.to_grid_payload(grid_columns, grid_rows))
+	ApiClient.validate_grid(GameState.to_grid_payload())
 
 func _move_item_to_equipped(item: Dictionary, x: int, y: int) -> void:
 	var item_id: String = item.get("item_id", "")
@@ -595,12 +752,14 @@ func _move_item_to_bench(item: Dictionary) -> void:
 
 # -- Juice: particles (contract sections 2 and 5) --
 
-func _spawn_snap_particles(cell: GridCell) -> void:
+func _spawn_snap_particles(cell: GridCell, footprint: Vector2i) -> void:
+	var rect := _footprint_rect(cell, footprint)
+	var radius: float = minf(rect.size.x, rect.size.y) * 0.2
 	var particles := _build_ring_particles(
-		cell_size.x * 0.4, cell_size.x * 0.32, 24, snap_particle_lifetime,
+		radius, radius * 0.8, 24, snap_particle_lifetime,
 		20.0, 40.0, 4.0, Color(0.0, 0.9, 0.8, 0.6), Color(0.0, 0.9, 0.8, 0.0))
 	_synergy_layer.add_child(particles)
-	particles.global_position = cell.get_global_rect().get_center()
+	particles.global_position = rect.get_center()
 	particles.emitting = true
 	get_tree().create_timer(snap_particle_lifetime + 0.1).timeout.connect(particles.queue_free)
 
@@ -694,7 +853,8 @@ func _spawn_synergy_border(synergy: Dictionary) -> void:
 	if source_cell == null:
 		return
 
-	var rect := source_cell.get_global_rect()
+	var footprint := GameState.item_footprint(source_card.get("_item_data"))
+	var rect := _footprint_rect(source_cell, footprint)
 	var direction: String = synergy.get("direction", "")
 	var half_strip := synergy_strip_width / 2.0
 	var strip_pos: Vector2

@@ -150,7 +150,7 @@ func _run_live_verify(screenshot_path: String) -> void:
 
 	ApiClient.start_match_completed.connect(func(data: Dictionary) -> void:
 		state["match"] = data, CONNECT_ONE_SHOT)
-	ApiClient.start_match(GameState.to_grid_payload(4, 4))
+	ApiClient.start_match(GameState.to_grid_payload())
 	for _i in 240:
 		if not (state["match"] as Dictionary).is_empty():
 			break

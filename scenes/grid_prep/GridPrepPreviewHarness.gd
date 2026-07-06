@@ -11,11 +11,12 @@ extends Control
 #       real round grant + shop roll, buys the cheapest slot, places it.
 
 const SAMPLE_BENCH_ITEMS: Array[Dictionary] = [
-	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "placement_coords": null},
-	{"item_id": "preview-2", "name": "Longbow", "item_type": "WEAPON", "weapon_category": "RANGED", "level": 1, "placement_coords": null},
-	{"item_id": "preview-3", "name": "Arcane Staff", "item_type": "WEAPON", "weapon_category": "ARCANE", "level": 2, "placement_coords": null},
-	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "placement_coords": null},
-	{"item_id": "preview-5", "name": "Healing Draught", "item_type": "POTION", "weapon_category": "", "level": 1, "placement_coords": null},
+	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-2", "name": "Longbow", "item_type": "WEAPON", "weapon_category": "RANGED", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-3", "name": "Arcane Staff", "item_type": "WEAPON", "weapon_category": "ARCANE", "level": 2, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-5", "name": "Healing Draught", "item_type": "POTION", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-6", "name": "Hunting Spear", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 2, "dimensions": {"width": 1, "height": 2}, "placement_coords": null},
 ]
 
 const SAMPLE_SHOP_SLOTS: Array[Dictionary] = [
@@ -33,7 +34,12 @@ func _ready() -> void:
 		return
 
 	GameState.player_id = "preview-player"
-	GameState.current_round = 3
+	var grid_size := 5
+	if OS.get_environment("SYNGRID_GRID_SIZE") != "":
+		grid_size = int(OS.get_environment("SYNGRID_GRID_SIZE"))
+	GameState.current_round = maxi(4, grid_size)
+	GameState.grid_columns = grid_size
+	GameState.grid_rows = grid_size
 	GameState.gold = 7
 	GameState.life_points = 4
 	GameState.triumph_count = 2
@@ -65,10 +71,14 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	for _i in 40:
 		await get_tree().process_frame
 	# Drive two real placements through the scene's drag lifecycle.
-	_auto_place(0, Vector2i(1, 1))
+	# Place multi-cell spear first, then adjacent 1x1 weapons for synergy check.
+	_auto_place_item("preview-6", Vector2i(0, 0))
 	for _i in 20:
 		await get_tree().process_frame
-	_auto_place(0, Vector2i(2, 1))
+	_auto_place_item("preview-1", Vector2i(2, 1))
+	for _i in 20:
+		await get_tree().process_frame
+	_auto_place_item("preview-2", Vector2i(3, 1))
 	# No Go server in this harness, so exercise the synergy glow shader +
 	# chime path by injecting a validate_grid response shaped like the real one.
 	_grid._on_validate_grid_completed({"synergies": [
@@ -77,6 +87,11 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	]})
 	for _i in 50:
 		await get_tree().process_frame
+	var grid_bottom: float = _grid._grid_area.position.y + _grid._grid_area.size.y
+	var bench_top: float = _grid.get_node("%BenchRow").offset_top
+	print("auto-verify: grid %dx%d cell=%.0f grid_bottom=%.0f bench_top=%.0f gap=%.0f" % [
+		_grid.grid_rows, _grid.grid_columns, _grid._layout_cell_size.y,
+		grid_bottom, bench_top, bench_top - grid_bottom])
 	print("auto-verify: %d synergy border(s) on screen" % _grid._synergy_borders.size())
 	print("auto-verify: %d shop card(s) on screen" % _grid.get_node("%ShopRow").get_child_count())
 	_save_and_quit(screenshot_path)
@@ -132,6 +147,21 @@ func _run_live_verify(screenshot_path: String) -> void:
 		_grid.get_node("%ShopRow").get_child_count(),
 		_grid.get_node("%StatusLabel").text])
 	_save_and_quit(screenshot_path)
+
+func _auto_place_item(item_id: String, cell_coords: Vector2i) -> void:
+	var bench_row: HBoxContainer = _grid.get_node("%BenchRow")
+	var card: ItemCard = null
+	for child in bench_row.get_children():
+		var candidate := child as ItemCard
+		if candidate != null and candidate.get("_item_data").get("item_id", "") == item_id:
+			card = candidate
+			break
+	if card == null:
+		push_error("auto-verify: no bench card for item_id %s" % item_id)
+		return
+	var cell: GridCell = _grid._cell_at(cell_coords.x, cell_coords.y)
+	_grid._on_card_drag_started(card)
+	_grid._on_card_drag_ended(card, cell.get_global_rect().get_center())
 
 func _auto_place(bench_idx: int, cell_coords: Vector2i) -> void:
 	var bench_row: HBoxContainer = _grid.get_node("%BenchRow")

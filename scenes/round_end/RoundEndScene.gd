@@ -356,6 +356,18 @@ func _pop_terminal_button() -> void:
 
 func _on_continue_pressed() -> void:
 	await _pulse(_continue_button).finished
+	_continue_button.disabled = true
+	_continue_button.text = "SYNCING..."
+	ApiClient.get_active_grid_completed.connect(_on_continue_grid_completed, CONNECT_ONE_SHOT)
+	ApiClient.get_active_grid_failed.connect(_on_continue_grid_failed, CONNECT_ONE_SHOT)
+	ApiClient.get_active_grid()
+
+func _on_continue_grid_completed(data: Dictionary) -> void:
+	GameState.hydrate_from_grid(data.get("grid", {}))
+	get_tree().change_scene_to_file(PREP_SCENE_PATH)
+
+func _on_continue_grid_failed(_code: int, _reason: String) -> void:
+	# LLD: never block the continue loop on sync failure; prep uses last-known state.
 	get_tree().change_scene_to_file(PREP_SCENE_PATH)
 
 func _on_new_run_pressed() -> void:
