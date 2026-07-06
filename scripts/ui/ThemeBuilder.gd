@@ -14,7 +14,8 @@ const PIXEL_FONT_PATH: String = "res://assets/fonts/syn_grid_pixel.ttf"
 
 const DEFAULT_FONT_SIZE: int = 16
 const PANEL_BORDER_WIDTH: int = 1
-const PANEL_CORNER_RADIUS: int = 0  # sharp corners - etched-circuit look, never rounded/glass
+const PANEL_CORNER_RADIUS: int = 16
+const PANEL_GLOW_MARGIN: int = 6
 const PANEL_CONTENT_MARGIN: float = 8.0
 
 # Label type variations (name -> [font_size, color]).
@@ -34,11 +35,10 @@ static func get_theme() -> Theme:
 		_cached_theme = _build_theme()
 	return _cached_theme
 
-# Shared "etched circuit-line" panel look: flat fill, thin sharp-cornered
-# border in the given color. shadow_size > 0 adds the lifted drop shadow used
-# while a card is dragged - never for resting panels.
+# Shared rounded neon-glass panel look: flat opaque fill, thin border, optional
+# colored outer glow (HUD pills, item slots) or plain drop shadow (drag lift).
 static func build_panel_style(border_color: Color, bg_color: Color,
-		shadow_size: int = 0) -> StyleBoxFlat:
+		shadow_size: int = 0, with_glow: bool = false) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = bg_color
 	style.border_color = border_color
@@ -48,7 +48,11 @@ static func build_panel_style(border_color: Color, bg_color: Color,
 	style.content_margin_right = PANEL_CONTENT_MARGIN
 	style.content_margin_top = PANEL_CONTENT_MARGIN
 	style.content_margin_bottom = PANEL_CONTENT_MARGIN
-	if shadow_size > 0:
+	if with_glow:
+		style.shadow_color = border_color
+		style.shadow_color.a = 0.35
+		style.shadow_size = PANEL_GLOW_MARGIN
+	elif shadow_size > 0:
 		style.shadow_size = shadow_size
 		style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
 	return style

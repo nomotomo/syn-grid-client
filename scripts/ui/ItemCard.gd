@@ -43,6 +43,7 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 @export var snap_settle_duration: float = 0.04
 
 @onready var _icon_rect: ColorRect = %IconRect
+@onready var _icon_texture: TextureRect = %IconTexture
 @onready var _name_label: Label = %NameLabel
 @onready var _badge_label: Label = %BadgeLabel
 
@@ -61,17 +62,33 @@ func _ready() -> void:
 	pivot_offset = size / 2.0
 	resized.connect(func() -> void: pivot_offset = size / 2.0)
 	_rest_style = ThemeBuilder.build_panel_style(
-		SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED)
+		SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
 	_drag_style = ThemeBuilder.build_panel_style(
 		SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_ELEVATED, drag_shadow_size)
 	add_theme_stylebox_override("panel", _rest_style)
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 
+func _icon_path_for(item: Dictionary) -> String:
+	var category := String(item.get("weapon_category", "")).to_lower()
+	if category == "":
+		category = "shield"
+	var display_name := String(item.get("name", item.get("template_name", "")))
+	var slug := display_name.to_lower().replace(" ", "_")
+	return "res://assets/sprites/items/icon_%s_%s.png" % [category, slug]
+
 func set_item_data(item: Dictionary) -> void:
 	_item_data = item
 	_name_label.text = String(item.get("name", item.get("template_name", "?")))
-	_icon_rect.color = SynGridPalette.tint_for_weapon_category(item.get("weapon_category", ""))
+	var path := _icon_path_for(item)
+	if ResourceLoader.exists(path):
+		_icon_texture.texture = load(path)
+		_icon_texture.visible = true
+		_icon_rect.visible = false
+	else:
+		_icon_texture.visible = false
+		_icon_rect.visible = true
+		_icon_rect.color = SynGridPalette.tint_for_weapon_category(item.get("weapon_category", ""))
 
 	if item.has("buy_price"):
 		_badge_label.text = "%dg" % int(item["buy_price"])

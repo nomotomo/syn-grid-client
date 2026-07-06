@@ -3,7 +3,7 @@
 Status: Decided 2026-07-05.
 Owner: Claude Code (Lead Architect).
 Driven by: user-supplied reference mockup (neon HUD, rounded glass panels) and 4 candidate itch.io packs.
-Consumers: sync-grid-client issues #7 (C8), #8 (C9), #10 (C10, new).
+Consumers: sync-grid-client issues #7 (C8), #8 (C9), #11 (C10, new).
 
 ## Scope
 
