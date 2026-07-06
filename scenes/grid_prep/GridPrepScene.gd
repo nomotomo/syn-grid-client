@@ -57,6 +57,8 @@ var _dragging_card: ItemCard = null
 var _dragging_origin: Node = null
 var _highlighted_cell: GridCell = null
 
+var _start_button_was_ready: bool = false
+
 var _purchase_in_flight: bool = false
 var _match_in_flight: bool = false
 var _pending_sell_card: ItemCard = null
@@ -315,7 +317,29 @@ func _render_bench() -> void:
 
 # -- Drag lifecycle --
 
+func _force_resolve_drag(card: ItemCard) -> void:
+	if card == null:
+		return
+	var drop_pos := card.global_position + card.size / 2.0
+	card.force_end_drag(drop_pos)
+
+func _nearest_empty_cell(drop_pos: Vector2) -> GridCell:
+	var snap_radius := cell_size.x * 0.5
+	var best: GridCell = null
+	var best_dist := snap_radius
+	for cell in _cells:
+		if cell.has_card():
+			continue
+		var center := cell.get_global_rect().get_center()
+		var dist := drop_pos.distance_to(center)
+		if dist < best_dist:
+			best_dist = dist
+			best = cell
+	return best
+
 func _on_card_drag_started(card: ItemCard) -> void:
+	if _dragging_card != null and _dragging_card != card:
+		_force_resolve_drag(_dragging_card)
 	_dragging_card = card
 	_dragging_origin = card.get_parent()
 	var pos := card.global_position
@@ -325,6 +349,9 @@ func _on_card_drag_started(card: ItemCard) -> void:
 	AudioManager.play_item_drag()
 
 func _process(_delta: float) -> void:
+	if _dragging_card != null and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_force_resolve_drag(_dragging_card)
+		return
 	if _dragging_card == null:
 		return
 	var center := _dragging_card.global_position + _dragging_card.size / 2.0
@@ -362,12 +389,8 @@ func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 			_return_card_to(card, origin)
 			_status_label.text = "ONLY BENCH ITEMS CAN BE RECYCLED"
 	else:
-		var target_cell: GridCell = null
-		for cell in _cells:
-			if cell.get_global_rect().has_point(drop_pos):
-				target_cell = cell
-				break
-		if target_cell != null and not target_cell.has_card():
+		var target_cell := _nearest_empty_cell(drop_pos)
+		if target_cell != null:
 			_place_card(card, target_cell)
 		elif target_cell == null and origin is GridCell and _bench_row.get_global_rect().has_point(drop_pos):
 			_unplace_card(card)
@@ -422,6 +445,38 @@ func _refresh_start_button() -> void:
 	var ready_to_fight := not GameState.equipped_items.is_empty()
 	_start_match_button.disabled = not ready_to_fight or _match_in_flight
 	_start_match_button.text = "START MATCH" if ready_to_fight else "PLACE AN ITEM TO FIGHT"
+	if ready_to_fight and not _start_button_was_ready:
+		_apply_start_button_glow()
+		_pop_start_button()
+	elif not ready_to_fight and _start_button_was_ready:
+		_apply_start_button_dim()
+	_start_button_was_ready = ready_to_fight
+
+func _apply_start_button_glow() -> void:
+	var glow := ThemeBuilder.build_panel_style(
+		SynGridPalette.ACCENT_TEAL, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
+	var glow_hover := ThemeBuilder.build_panel_style(
+		SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
+	var glow_pressed := ThemeBuilder.build_panel_style(
+		SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
+	_start_match_button.add_theme_stylebox_override("normal", glow)
+	_start_match_button.add_theme_stylebox_override("hover", glow_hover)
+	_start_match_button.add_theme_stylebox_override("pressed", glow_pressed)
+
+func _apply_start_button_dim() -> void:
+	_start_match_button.remove_theme_stylebox_override("normal")
+	_start_match_button.remove_theme_stylebox_override("hover")
+	_start_match_button.remove_theme_stylebox_override("pressed")
+	_start_match_button.scale = Vector2.ONE
+
+func _pop_start_button() -> void:
+	_start_match_button.pivot_offset = _start_match_button.size / 2.0
+	_start_match_button.scale = Vector2.ZERO
+	var tw := create_tween().set_parallel(false)
+	tw.tween_property(_start_match_button, "scale", Vector2(1.1, 1.1), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	tw.tween_property(_start_match_button, "scale", Vector2(1.0, 1.0), 0.06) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
 
 func _on_start_match_pressed() -> void:
 	if _match_in_flight:
