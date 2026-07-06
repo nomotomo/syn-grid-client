@@ -34,9 +34,12 @@ func _ready() -> void:
 		return
 
 	GameState.player_id = "preview-player"
-	GameState.current_round = 4
-	GameState.grid_columns = 5
-	GameState.grid_rows = 5
+	var grid_size := 5
+	if OS.get_environment("SYNGRID_GRID_SIZE") != "":
+		grid_size = int(OS.get_environment("SYNGRID_GRID_SIZE"))
+	GameState.current_round = maxi(4, grid_size)
+	GameState.grid_columns = grid_size
+	GameState.grid_rows = grid_size
 	GameState.gold = 7
 	GameState.life_points = 4
 	GameState.triumph_count = 2
@@ -84,6 +87,11 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	]})
 	for _i in 50:
 		await get_tree().process_frame
+	var grid_bottom: float = _grid._grid_area.position.y + _grid._grid_area.size.y
+	var bench_top: float = _grid.get_node("%BenchRow").offset_top
+	print("auto-verify: grid %dx%d cell=%.0f grid_bottom=%.0f bench_top=%.0f gap=%.0f" % [
+		_grid.grid_rows, _grid.grid_columns, _grid._layout_cell_size.y,
+		grid_bottom, bench_top, bench_top - grid_bottom])
 	print("auto-verify: %d synergy border(s) on screen" % _grid._synergy_borders.size())
 	print("auto-verify: %d shop card(s) on screen" % _grid.get_node("%ShopRow").get_child_count())
 	_save_and_quit(screenshot_path)
