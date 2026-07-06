@@ -34,7 +34,8 @@ func get_card() -> ItemCard:
 func highlight(on: bool) -> void:
 	var border_color := SynGridPalette.BORDER_ACTIVE if on else SynGridPalette.BORDER_DIM
 	add_theme_stylebox_override(
-		"panel", ThemeBuilder.build_panel_style(border_color, SynGridPalette.PANEL_BG_ELEVATED)
+		"panel", ThemeBuilder.build_panel_style(
+			border_color, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
 	)
 	if _pulse_tween != null and _pulse_tween.is_valid():
 		_pulse_tween.kill()

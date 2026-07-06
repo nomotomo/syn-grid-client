@@ -31,8 +31,7 @@ const HP_LOW: Color = Color(0.85, 0.10, 0.10)
 # Crimson reused verbatim from juice_manual.md section 4's crit damage-float spec.
 const DANGER: Color = Color(0.85, 0.10, 0.10)
 
-# Icon placeholder tint per weapon_category, until real pixel-art sprites are
-# sourced (juice_manual.md section 6).
+# ColorRect fallback tint when no sprite file matches (C10 ItemCard contract).
 const ITEM_TYPE_TINT: Dictionary = {
 	"MELEE": Color(0.75, 0.30, 0.25),
 	"RANGED": Color(0.35, 0.65, 0.35),

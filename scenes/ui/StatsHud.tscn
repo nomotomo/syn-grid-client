@@ -1,74 +1,119 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/StatsHud.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_gold.png" id="2_gold"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_life.png" id="3_life"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/icon_triumph.png" id="4_triumph"]
 
 [node name="StatsHud" type="HBoxContainer"]
 theme_override_constants/separation = 12
 script = ExtResource("1")
 
 [node name="RoundPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="VBox" type="VBoxContainer" parent="RoundPanel"]
+[node name="HBox" type="HBoxContainer" parent="RoundPanel"]
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="RoundPanel/VBox"]
+[node name="VBox" type="VBoxContainer" parent="RoundPanel/HBox"]
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Title" type="Label" parent="RoundPanel/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
 horizontal_alignment = 1
 text = "ROUND"
 
-[node name="RoundValue" type="Label" parent="RoundPanel/VBox"]
+[node name="RoundValue" type="Label" parent="RoundPanel/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
 horizontal_alignment = 1
 text = "1"
 
 [node name="GoldPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="VBox" type="VBoxContainer" parent="GoldPanel"]
+[node name="HBox" type="HBoxContainer" parent="GoldPanel"]
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="GoldPanel/VBox"]
+[node name="GoldIcon" type="TextureRect" parent="GoldPanel/HBox"]
+custom_minimum_size = Vector2(32, 32)
+texture = ExtResource("2_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="GoldPanel/HBox"]
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Title" type="Label" parent="GoldPanel/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
 horizontal_alignment = 1
 text = "GOLD"
 
-[node name="GoldValue" type="Label" parent="GoldPanel/VBox"]
+[node name="GoldValue" type="Label" parent="GoldPanel/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
 horizontal_alignment = 1
 text = "0"
 
 [node name="LifePanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="VBox" type="VBoxContainer" parent="LifePanel"]
+[node name="HBox" type="HBoxContainer" parent="LifePanel"]
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="LifePanel/VBox"]
+[node name="LifeIcon" type="TextureRect" parent="LifePanel/HBox"]
+custom_minimum_size = Vector2(32, 32)
+texture = ExtResource("3_life")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="LifePanel/HBox"]
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Title" type="Label" parent="LifePanel/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
 horizontal_alignment = 1
 text = "LIFE"
 
-[node name="LifeValue" type="Label" parent="LifePanel/VBox"]
+[node name="LifeValue" type="Label" parent="LifePanel/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
 horizontal_alignment = 1
 text = "5"
 
 [node name="TriumphPanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
 size_flags_horizontal = 3
 
-[node name="VBox" type="VBoxContainer" parent="TriumphPanel"]
+[node name="HBox" type="HBoxContainer" parent="TriumphPanel"]
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Title" type="Label" parent="TriumphPanel/VBox"]
+[node name="TriumphIcon" type="TextureRect" parent="TriumphPanel/HBox"]
+custom_minimum_size = Vector2(32, 32)
+texture = ExtResource("4_triumph")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="TriumphPanel/HBox"]
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Title" type="Label" parent="TriumphPanel/HBox/VBox"]
 theme_type_variation = &"HudTitleLabel"
 horizontal_alignment = 1
 text = "TRIUMPH"
 
-[node name="TriumphValue" type="Label" parent="TriumphPanel/VBox"]
+[node name="TriumphValue" type="Label" parent="TriumphPanel/HBox/VBox"]
 unique_name_in_owner = true
 theme_type_variation = &"HudValueLabel"
 horizontal_alignment = 1

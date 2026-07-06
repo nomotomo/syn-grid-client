@@ -10,12 +10,19 @@ extends HBoxContainer
 @export var value_pop_scale: float = 1.3
 @export var value_pop_duration: float = 0.25
 
+@onready var _round_panel: PanelContainer = %RoundPanel
+@onready var _gold_panel: PanelContainer = %GoldPanel
+@onready var _life_panel: PanelContainer = %LifePanel
+@onready var _triumph_panel: PanelContainer = %TriumphPanel
 @onready var _round_value: Label = %RoundValue
 @onready var _gold_value: Label = %GoldValue
 @onready var _life_value: Label = %LifeValue
 @onready var _triumph_value: Label = %TriumphValue
 
 func _ready() -> void:
+	for panel: PanelContainer in [_round_panel, _gold_panel, _life_panel, _triumph_panel]:
+		panel.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
+			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, 0, true))
 	_gold_value.add_theme_color_override("font_color", SynGridPalette.GOLD)
 	_triumph_value.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
 	refresh()
