@@ -467,4 +467,85 @@ That's a full week of daily patches, each visible to players. Everything else in
 
 ---
 
+## 10. Architect pass (Jul 2026) - refinements and new ideas
+
+_Added by Claude Code (Lead Architect) after reviewing this doc against the server's Gameplay Depth epic (sync-grid #26, children G1-G7) and the client backlog._
+
+### 10.1 Where this doc overlaps the server epic (do not double-build)
+
+Several ideas above are already specced server-side with dependency ordering.
+Build them through the epic, not as fresh designs:
+
+- §3.1 item passives → covered by **G1** (potions/relics/stamina) + **G2** (status effects, elemental types).
+- §3.5 class/role synergies → covered by **G5** (synergy evolution: buff-neighbor, defensive, scaling, set bonuses).
+- §2.1 round modifiers and §2.2 bosses → covered by **G7** (mutators + PvE boss ladder).
+- §1.2 terrain cells and §1.3 locked cells → **G6** already introduces blocked/buff special cells as hero starting conditions; terrain should extend that same `CellEffect` foundation rather than invent a parallel system.
+- §3.3 enchantment sockets → fold into **G4** (rarity + catalog) as a later phase; do not build a separate gem system first.
+
+### 10.2 Refinements to existing ideas
+
+- **Merge the two hint designs**: improvements.md §2.2 (best-slot long-press) and this doc's §5.5 (inaction tooltips) are the same "placement suggester" - build one client-side suggestion engine with two triggers.
+- **Fold §6.7 daily events and §6.11 weather into one system**: both are "a timed global modifier row in the DB that the match-maker reads"; one table, one endpoint, two presentation skins.
+- **Battle report advice (§4.2 page 3) and adaptive coaching (§5.4) share one rule engine**: a small client-side library that pattern-matches the combat log; the coach is just a different render target.
+- **§2.6 round objectives should reuse G7's mutator announcement UI** (full-viewport banner + HUD chip) so the pre-round briefing has one consistent surface.
+- **§3.2 item merges is the single highest-value non-epic item in this doc**: it is a known-good genre pattern, server-tiny, and every player instantly understands it. Promoted to P1.
+
+### 10.3 New ideas (this pass)
+
+#### A. Weekly Gauntlet - fixed-seed event mode  •  M · server-tiny
+Combat is already deterministic with injected `rng.Source`.
+Once a week, publish a fixed seed: every player gets identical shop rolls, identical modifier schedule, identical boss.
+Separate 7-day leaderboard; end-of-week cosmetic reward for top percentile.
+This is the cheapest possible "fair competitive event" because the determinism work is already done.
+
+#### B. Nemesis rival ghosts  •  S · server-tiny
+Track the async opponent who most recently eliminated you.
+When matchmaking pairs you against a newer ghost of that same player, show a "REVENGE MATCH" chip; winning banks bonus triumph.
+Personalizes async PvP - the opponent stops being a random name.
+
+#### C. Gold interest / banking  •  S · server-tiny
+At round end, +1 bonus gold per 10 gold banked, capped at +5.
+Creates the classic spend-now-vs-compound decision every auto-battler economy needs.
+Server-side only; client shows an "INTEREST +N" line in the round-end gold award.
+
+#### D. Shop pity timer  •  S · server-tiny
+Bad-luck protection: after N consecutive shop rolls with zero synergy-relevant items for the player's current grid, guarantee one.
+Silent - never surfaced in UI.
+Reduces tilt-quits without touching perceived fairness.
+
+#### E. Shareable replay codes  •  M · server-tiny + client M
+The combat log is already a complete deterministic record.
+Expose `GET /v1/replays/{match_id}`, give the round-end scene a "COPY REPLAY CODE" button, and let anyone paste a code to watch the fight in CombatReplayScene.
+Zero new simulation work; pure serialization + one client entry point.
+
+#### F. Practice Forge - sandbox vs your own ghost  •  M · client + server-tiny
+Re-fight your previous round with a rearranged grid, no rewards, unlimited retries.
+Teaches placement cause-and-effect better than any tutorial text.
+Needs one endpoint: "run combat against my own round-N snapshot".
+
+#### G. Dynamic BGM intensity layers  •  M · client-only
+Author the combat track as stems (base / percussion / lead).
+Fade stems in as either team drops below 50% then 25% total HP.
+Vertical remixing is the single biggest audio-feel win after the SFX matrix.
+
+#### H. Grid scars - cosmetic battle memory  •  S · client-only
+Cells where one of your items died this session show a faint crack/scorch decal for the rest of the session.
+Zero mechanics; the board quietly tells your story.
+
+#### I. One-thumb reachability mode  •  S · client-only
+Settings toggle that keeps all primary action buttons inside the bottom 60% of the portrait viewport.
+Cheap and meaningful for one-handed commute play.
+
+### 10.4 Issue map (created Jul 2026)
+
+Server (`nomotomo/sync-grid`) - epic **#57 "Match Variety and Meta Systems"** (children M1-M10 = #47-#56) plus the existing gameplay-depth epic #26:
+item merges (#47), round objectives (#48), combat-log metadata for the battle report (#49), board variety on the G6 cell foundation (#50), leagues (#51), weekly gauntlet (#52), economy depth (#53), nemesis ghosts (#54), shareable replays (#55), timed global events (#56).
+
+Client (`nomotomo/sync-grid-client`) - epic **#42 "Client Experience Roadmap"** (children E1-E14 = #28-#41):
+combat feel batch (#28), combat readability overlays (#29), audio completion (#30), battle report scene + heatmap (#31), grid-prep clarity (#32), onboarding + hints (#33), meta screens (#34), round-end ceremony (#35), accessibility (#36), tech debt (#37), BGM layers (#38), leaderboard polish (#39), retention pack (#40), polish grab-bag (#41).
+
+Every issue carries a `P0`-`P3` label and an explicit order; the two epics hold the cross-repo sequencing.
+
+---
+
 _End of design brainstorm. Pick anything, push back on anything, add anything._

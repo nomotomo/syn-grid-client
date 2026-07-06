@@ -302,3 +302,31 @@ Items **3.1** (Codex screen) + **9.1** (daily streak) + **9.5** (rank-moved toas
 Items **2.1** (synergy preview) + **10.1** (card foil animation) + **5.2** (triumph orb fly-in). The kind of polish that gets reviewers saying "surprisingly slick for a solo indie."
 
 Pick any single item, any combo, or the whole section — every entry is scoped to be independent.
+
+---
+
+## 12. Architect triage (Jul 2026) - how this doc became issues
+
+_Added by Claude Code (Lead Architect)._
+Every item above has been batched into a GitHub issue on `nomotomo/sync-grid-client` under the **"Client Experience Roadmap" epic #42** (children #28-#41), each with a `P0`-`P3` priority label and a wave order.
+The authoritative cross-repo sequencing lives in the server epic `nomotomo/sync-grid` #57.
+
+Batching (issue = the batch, doc sections = the spec):
+
+- **Combat feel batch** (P1): §1.1, §1.2, §1.4, §1.6 - Combo A plus the slow-mo killing blow.
+- **Combat readability** (P1): §1.3 log ticker + game_ideas.md §4.1 telemetry overlays.
+- **Audio completion** (P1): §6.1-§6.4 - closes the Phase C9 gaps that survived issue #8.
+- **Battle Report scene** (P1): game_ideas.md §4.2 + §4.5 heatmap; blocked on a small server metadata issue.
+- **Grid-prep clarity** (P2): §2.1-§2.6 + §10.3 merge flash.
+- **Onboarding & hints** (P2): §9.2 + game_ideas.md §5.1, §5.2, §5.5 (one suggestion engine, two triggers).
+- **Meta screens** (P2): §3.1-§3.5.
+- **Round-end ceremony** (P2): §5.1-§5.4 + §9.5 rank toast.
+- **Accessibility** (P2): §7.1-§7.5 + one-thumb mode (game_ideas.md §10.3-I).
+- **Tech debt** (P2): §8.1-§8.5.
+- **Leaderboard polish** (P3): §4.1-§4.4.
+- **Retention pack** (P3): §9.1, §9.3, §9.4 + game_ideas.md §3.4 mastery + §10.3-H grid scars.
+- **Polish grab-bag** (P3): §10.1, §10.2, §10.4, §10.5 + game_ideas.md §6.12 reactive menu.
+- **Dynamic BGM layers** (P3): game_ideas.md §10.3-G.
+
+§1.5 (debug scrubber) folds into the Battle Report issue as the timeline scrubber MVP.
+Refinement: §2.2 best-slot hint and game_ideas.md §5.5 inaction tooltips are one placement-suggestion engine - specced once inside the onboarding & hints issue.
