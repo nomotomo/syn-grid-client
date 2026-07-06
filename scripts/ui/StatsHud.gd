@@ -18,6 +18,7 @@ extends HBoxContainer
 @onready var _gold_value: Label = %GoldValue
 @onready var _life_value: Label = %LifeValue
 @onready var _triumph_value: Label = %TriumphValue
+@onready var _triumph_icon: TextureRect = %TriumphIcon
 
 func _ready() -> void:
 	for panel: PanelContainer in [_round_panel, _gold_panel, _life_panel, _triumph_panel]:
@@ -25,6 +26,8 @@ func _ready() -> void:
 			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, 0, true))
 	_gold_value.add_theme_color_override("font_color", SynGridPalette.GOLD)
 	_triumph_value.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+	# Kenney white stencils need a tint to read on dark panels.
+	_triumph_icon.self_modulate = SynGridPalette.ACCENT_TEAL
 	refresh()
 
 func refresh() -> void:
