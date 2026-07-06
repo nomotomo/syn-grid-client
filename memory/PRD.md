@@ -114,18 +114,64 @@ Rendered through the SYNGRID_SCREENSHOT harnesses:
 - `scenes/grid_prep/GridPrepScene.gd` (`_build_coord_labels()` called from `_build_cells()`)
 - `memory/PRD.md` (this section)
 
-### Prioritised backlog (post-session-3)
+## Session #4 — Battle-page A+B + 3 P2 follow-ups  (Jan 2026)
+
+### Battle-page upgrades (Tier A + Tier B)
+
+**A1. Projectile trails** (`CombatReplayScene._spawn_projectile`)
+Line2D streaks fly from the firer's card centre to the impact point over one tick (0.09 s), tapered by animating tail-position 0.06 s behind the head. Category-tinted: RANGED = forest green, ARCANE = purple, MELEE = no projectile (lunge handles it). Crit shots are `lightened(0.35)` and use `width = 5.0` instead of `3.5`.
+
+**A2. Hitmark rings on impact** (`CombatReplayScene._spawn_hitmark`)
+Reuses the existing `assets/sprites/effects/hitmark.png` (4-corner brackets). Spawns at 40 % scale, pops to 135 % with `TRANS_ELASTIC`, rotates 12 % of TAU, then fades over 0.22 s. Colour matches hit type: crit = DANGER crimson, pure-shield-absorb = ACCENT_SILVER, normal HP damage = ACCENT_TEAL.
+
+**A3. Muzzle flash at firer** (`CombatReplayScene._spawn_muzzle_flash`)
+Reuses `spark.png` at the firer's card centre with a random rotation, category-tinted, scale pop `0.4 → 1.3` with `TRANS_BACK`, fade over 0.16 s.
+
+**B1. Directional camera kick** (`CombatReplayScene._apply_directional_kick`)
+Player attacks bounce the screen -8 px on Y over 0.05 s then settle over 0.14 s; opponent attacks bounce +8 px. Uses `_shake_camera.position:y` — ScreenEffects's shake uses `.offset`, so the two channels never fight.
+
+**B2. Battle intro banner** (`CombatReplayScene._play_intro_banner`)
+"CALLSIGN\nvs\nOPPONENT" 3-line label pops in at 0.60× scale to 1.00× with `TRANS_ELASTIC`, holds 0.45 s, fades over 0.20 s. Purple outline at 80 % alpha for a "hero card" look. Called from `load_and_start_replay` right before `intro_delay`.
+
+**B3. Killing-blow flash** (`CombatReplayScene._play_killing_blow_effect`)
+When `hp_loss > 0` and `target_hp_after <= 0`, spawns a full-viewport `DANGER` crimson wash at 45 % alpha that fades to zero over 0.35 s. Non-blocking, self-frees.
+
+All new helpers live at the bottom of `CombatReplayScene.gd`. A `_projectile_layer: Node2D` (z_index 8) is spun up in `_ready()` as the reparent target for every effect node so scene teardown auto-cleans them.
+
+### 3 P2 follow-ups shipped in the same session
+
+1. **SEASON tab → Season Hub scaffold** — new `scenes/season_hub/SeasonHub.tscn` + `.gd` with a purple-tinted arcane rune-field backdrop, big pixel SEASON HUB title, two capsule cards (SEASON WINDOW countdown, YOUR TRIUMPH value), a "REWARDS LADDER - COMING SOON" placeholder, and a full-width BACK button. `MainMenu._on_season_tab_pressed()` now calls `get_tree().change_scene_to_file()` instead of showing a status. New `SeasonHubPreviewHarness.tscn` for scripted screenshot proof.
+2. **Bigger CRT dial** — bumped `scanline_intensity` 0.22 → 0.42, `scanline_frequency` 220 → 260, `chromatic_shift` 0.8 → 1.8, `jitter_rate` 0.35 → 0.55, `jitter_amount` 0.6 → 1.2 on the `CrtMaterial` sub_resource. Result: strong teal/purple colour fringing on every SYN-GRID glyph.
+3. **HUD pill tooltips** — added `tooltip_text` on all four `StatsHud` pills (ROUND / GOLD / LIFE / TRIUMPH). Added `TooltipPanel` StyleBox and `TooltipLabel` font-size/colour to `ThemeBuilder` so tooltips render with the same rounded neon-glass look as the pills instead of Godot's default flat popup.
+
+### Files changed / added in this session
+- `scenes/combat_replay/CombatReplayScene.gd` (6 new helpers + `_projectile_layer` + intro banner call + directional kick + killing-blow flash)
+- `scenes/season_hub/SeasonHub.tscn` (new)
+- `scenes/season_hub/SeasonHub.gd` (new)
+- `scenes/season_hub/SeasonHubPreviewHarness.tscn` + `.gd` (new — for scripted proof rendering)
+- `scenes/main_menu/MainMenu.tscn` (`CrtMaterial` sub_resource tuned)
+- `scenes/main_menu/MainMenu.gd` (`_on_season_tab_pressed` routes to SeasonHub)
+- `scripts/ui/StatsHud.gd` (tooltip_text on each of the 4 pills)
+- `scripts/ui/ThemeBuilder.gd` (TooltipPanel StyleBox + TooltipLabel font styling)
+- `memory/PRD.md` (this section)
+
+### Proof
+Rendered clean (zero SCRIPT ERRORs on project import):
+- `/screenshots/after4_main_menu.png` — visible strong CRT chromatic fringing on SYN-GRID
+- `/screenshots/after4_season_hub.png` — new Season Hub scaffold
+- `/screenshots/after4_combat_replay.png` — combat scene compiles + arcane floors + timer ring (projectile/hitmark/muzzle effects are transient and only render mid-playback — verified via clean parse but not in a still)
+
+### Prioritised backlog (post-session-4)
 
 **P2 remaining**
-- Tooltip popovers on HUD pills (glass legal per juice §1)
-- Wire the SEASON tab to actually route to a Season Hub screen once that scene exists
-- Bigger tunable for the CRT title effect (currently subtle; could bump `scanline_intensity` if you want more retro grit)
+- Tier C battle upgrades (spark trails behind damage floats, live hit-counter footer) — deferred per user's credit-saving pick
 
 **P3 / Future**
 - Custom cursor set (arrow / grab / forbidden)
 - Signal-strength bars near the LINKING status
 - Per-tier item-icon rarity halo behind the sprite
 - Codex screen from the PROFILE tab - a scrollable grimoire of every discovered item
+- Real Season Hub content once the server endpoints exist (rewards ladder, past-season history, opt-in cosmetics)
 
 ## What is NOT working / not touched
 - **Vulkan → OpenGL 3 fallback** on the preview pod (no GPU) triggers a benign console warning during proof render; production Android target uses Vulkan Mobile and is unaffected.

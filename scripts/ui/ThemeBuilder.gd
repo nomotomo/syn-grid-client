@@ -157,6 +157,14 @@ static func _build_theme() -> Theme:
 
         theme.set_color("font_color", "Label", SynGridPalette.TEXT_PRIMARY)
 
+        # Tooltip styling: rounded pill with dim teal border, opaque VOID fill
+        # (juice manual bans glass behind LIVE numbers, but tooltips are
+        # non-live overlays over static hint text, so they're fair game).
+        theme.set_stylebox("panel", "TooltipPanel",
+                build_panel_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.VOID, 0, true))
+        theme.set_color("font_color", "TooltipLabel", SynGridPalette.TEXT_PRIMARY)
+        theme.set_font_size("font_size", "TooltipLabel", 14)
+
         for variation_name: String in LABEL_VARIATIONS:
                 var spec: Array = LABEL_VARIATIONS[variation_name]
                 theme.set_type_variation(variation_name, "Label")

@@ -29,10 +29,16 @@ extends HBoxContainer
 func _ready() -> void:
 	# Every HUD pill uses the L2 capsule style with a soft border glow so
 	# the eye reads them as "chrome buttons on a control panel" rather than
-	# generic cards.
+	# generic cards. Each pill also carries a tooltip so a long-press /
+	# hover surfaces the resource's meaning (glass legal here per
+	# juice_manual.md section 1 - tooltips are non-live overlays).
 	for panel: PanelContainer in [_round_panel, _gold_panel, _life_panel, _triumph_panel]:
 		panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
 			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, true))
+	_round_panel.tooltip_text = "ROUND\nCurrent round of the season."
+	_gold_panel.tooltip_text = "GOLD\nSpent at the shop each round to buy items or refresh the roster."
+	_life_panel.tooltip_text = "LIFE\nEach lost match subtracts one life. Reach zero and the season resets."
+	_triumph_panel.tooltip_text = "TRIUMPH\nSeason score. Earned by winning matches; climbs the leaderboard."
 	_gold_value.add_theme_color_override("font_color", SynGridPalette.GOLD)
 	_triumph_value.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
 	refresh()

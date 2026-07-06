@@ -326,7 +326,7 @@ func _on_home_tab_pressed() -> void:
 
 func _on_season_tab_pressed() -> void:
         _pulse(_season_tab)
-        _set_status("SEASON HUB - COMING SOON")
+        get_tree().change_scene_to_file("res://scenes/season_hub/SeasonHub.tscn")
 
 func _on_profile_tab_pressed() -> void:
         _pulse(_profile_tab)

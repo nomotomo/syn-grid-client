@@ -46,6 +46,11 @@ const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 @onready var _player_grid_area: Control = %PlayerGridArea
 @onready var _player_grid_container: GridContainer = %PlayerGridContainer
 @onready var _player_floor: ColorRect = %PlayerFloor
+
+# Neon Grimoire session #4: projectile/hitmark/muzzle-flash reparent target.
+# Created in _ready() so the scene's script can be tested standalone without
+# extra .tscn wiring.
+var _projectile_layer: Node2D = null
 @onready var _float_layer: Control = %FloatLayer
 @onready var _result_overlay: ColorRect = %ResultOverlay
 @onready var _result_banner: Label = %ResultBanner
@@ -69,6 +74,15 @@ func _ready() -> void:
         theme = ThemeBuilder.get_theme()
         _background.color = SynGridPalette.PANEL_BG
         _layout_screen()
+
+        # Projectile layer sits above the item grids but below any overlay
+        # banner/flash. All battle-page FX (projectiles, hitmarks, muzzle
+        # flashes) reparent to this node so they self-clean when the scene
+        # exits.
+        _projectile_layer = Node2D.new()
+        _projectile_layer.name = "ProjectileLayer"
+        _projectile_layer.z_index = 8
+        add_child(_projectile_layer)
 
         # ScreenEffects shakes by offsetting the current camera; centred at the
         # viewport midpoint the camera reproduces the identity view.
@@ -110,6 +124,7 @@ func _ready() -> void:
         AudioManager.play_combat_bgm()
         _tick_label.text = "TICK 0 / %d" % int(log.get("total_ticks", 0))
         _update_round_timer_progress(0, int(log.get("total_ticks", 0)))
+        _play_intro_banner(_opp_name.text)
         await get_tree().create_timer(intro_delay).timeout
         _log_player.load_log(log)
 
@@ -210,17 +225,33 @@ func _on_event_played(ev: Dictionary) -> void:
         var crit: bool = ev.get("crit", false)
         var hp_loss := float(ev.get("hp_loss", 0.0))
         var shield_absorbed := float(ev.get("shield_absorbed", 0.0))
+        var target_hp_after := float(ev.get("target_hp_after", 0.0))
 
         _play_lunge(firing_id)
         _play_fire_sfx(firing_id, crit)
 
+        # Neon Grimoire battle-page upgrades (Session #4 A/B):
+        # muzzle flash at firer, projectile streak to target (RANGED/ARCANE),
+        # hitmark ring at impact, directional camera kick.
+        var firing_card: ItemCard = _cards_by_item_id.get(firing_id)
+        var firing_item: Dictionary = _items_by_id.get(firing_id, {})
+        var category := String(firing_item.get("weapon_category", ""))
+        var attacker_side := String(_side_by_item_id.get(firing_id, "player"))
+
         # Server-authoritative bar update.
         var target_bar: HpBar = _bars_by_player_id.get(String(ev.get("target_player_id", "")))
         if target_bar != null:
-                target_bar.set_state(float(ev.get("target_hp_after", 0.0)),
+                target_bar.set_state(target_hp_after,
                         float(ev.get("target_shield_after", 0.0)))
 
         var impact_pos := _impact_position(ev, target_bar)
+        if firing_card != null:
+                _spawn_muzzle_flash(firing_card.get_global_rect().get_center(), category)
+                _spawn_projectile(firing_card.get_global_rect().get_center(),
+                        impact_pos, category, crit)
+        _spawn_hitmark(impact_pos, crit, shield_absorbed, hp_loss)
+        _apply_directional_kick(attacker_side)
+
         if shield_absorbed > 0.0:
                 AudioManager.play_shield_absorb(impact_pos)
         if hp_loss > 0.0:
@@ -229,6 +260,11 @@ func _on_event_played(ev: Dictionary) -> void:
 
         # Shake scales with damage; ScreenEffects adds the crit flash + hit-stop.
         ScreenEffects.shake_from_hit(hp_loss, COMBAT_MAX_HP, crit)
+
+        # Killing-blow accent: on the shot that ends a life bar, paint a soft
+        # DANGER wash over the whole viewport that fades out over 0.35s.
+        if hp_loss > 0.0 and target_hp_after <= 0.0:
+                _play_killing_blow_effect()
 
 func _play_lunge(firing_id: String) -> void:
         var card: ItemCard = _cards_by_item_id.get(firing_id)
@@ -441,3 +477,174 @@ func _update_round_timer_progress(current_tick: int, total_ticks: int) -> void:
                 return
         var remaining := clampf(1.0 - float(current_tick) / float(total_ticks), 0.0, 1.0)
         _round_timer_ring.material.set_shader_parameter("progress", remaining)
+
+# -- Neon Grimoire battle-page upgrades (session #4, tiers A + B) --
+#
+# All helpers below are pure presentation: they spawn short-lived visual
+# nodes (Line2D streaks, TextureRect hitmarks/flashes, full-screen wash) and
+# tween them, then self-free. They never touch GameState, ApiClient, or the
+# CombatLogPlayer's timing - juice_manual.md section 4 timing rules (0.10s
+# tick cadence, hit-stop 2 frames, no LINEAR tweens) are all preserved.
+
+const _PROJECTILE_SPARK_TEXTURE: Texture2D = preload("res://assets/sprites/effects/spark.png")
+const _PROJECTILE_HITMARK_TEXTURE: Texture2D = preload("res://assets/sprites/effects/hitmark.png")
+
+func _projectile_color(category: String) -> Color:
+        # Warm/cool tints so the eye reads category at a glance without needing
+        # to look at the source card.
+        match category:
+                "RANGED":
+                        return Color(0.35, 0.85, 0.35)
+                "ARCANE":
+                        return SynGridPalette.ACCENT_PURPLE
+                "MELEE":
+                        return Color(0.95, 0.35, 0.30)
+                _:
+                        return SynGridPalette.ACCENT_TEAL
+
+# RANGED / ARCANE fires spawn a tapered Line2D that flies from the firer's
+# card centre to the impact point over one tick (0.10s), then fades. MELEE
+# uses its lunge instead - no projectile.
+func _spawn_projectile(from_pos: Vector2, target_pos: Vector2,
+                category: String, crit: bool) -> void:
+        if category == "MELEE" or category == "":
+                return
+        var line := Line2D.new()
+        var color := _projectile_color(category)
+        if crit:
+                color = color.lightened(0.35)
+        line.default_color = color
+        line.width = 5.0 if crit else 3.5
+        line.z_index = 10
+        line.add_point(from_pos)
+        line.add_point(from_pos)
+        _projectile_layer.add_child(line)
+        var travel := 0.09
+        # Head races to target; tail follows with a slight lag to give the
+        # streak a tapered "trail" look.
+        var tw := line.create_tween().set_parallel(true)
+        tw.tween_method(func(v: Vector2) -> void:
+                line.set_point_position(1, v),
+                from_pos, target_pos, travel) \
+                .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        tw.tween_method(func(v: Vector2) -> void:
+                line.set_point_position(0, v),
+                from_pos, target_pos, travel + 0.06).set_delay(0.02)
+        tw.tween_property(line, "modulate:a", 0.0, 0.14).set_delay(travel + 0.02)
+        line.create_tween().tween_callback(line.queue_free).set_delay(travel + 0.22)
+
+# Bracket-style hitmark ring that pops (elastic overshoot) at the impact
+# point, spins slightly, then fades. Crimson = crit, silver = pure shield
+# block, teal = normal HP damage.
+func _spawn_hitmark(pos: Vector2, crit: bool, shield_absorbed: float, hp_loss: float) -> void:
+        var tex := TextureRect.new()
+        tex.texture = _PROJECTILE_HITMARK_TEXTURE
+        tex.size = Vector2(56.0, 56.0)
+        tex.pivot_offset = Vector2(28.0, 28.0)
+        tex.position = pos - Vector2(28.0, 28.0)
+        var color: Color
+        if crit:
+                color = SynGridPalette.DANGER
+        elif hp_loss <= 0.0 and shield_absorbed > 0.0:
+                color = SynGridPalette.ACCENT_SILVER
+        else:
+                color = SynGridPalette.ACCENT_TEAL
+        tex.modulate = Color(color.r, color.g, color.b, 0.9)
+        tex.scale = Vector2(0.4, 0.4)
+        tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        tex.z_index = 12
+        _projectile_layer.add_child(tex)
+        var tw := tex.create_tween().set_parallel(true)
+        tw.tween_property(tex, "scale", Vector2(1.35, 1.35), 0.12) \
+                .set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+        tw.tween_property(tex, "rotation", TAU * 0.12, 0.34) \
+                .set_trans(Tween.TRANS_QUAD)
+        tw.tween_property(tex, "modulate:a", 0.0, 0.22).set_delay(0.13) \
+                .set_trans(Tween.TRANS_QUAD)
+        tex.create_tween().tween_callback(tex.queue_free).set_delay(0.36)
+
+# Small sparkle at the firer's card centre - "energy released" feel. Same
+# category tint as the projectile so the whole strike reads as one motion.
+func _spawn_muzzle_flash(pos: Vector2, category: String) -> void:
+        var tex := TextureRect.new()
+        tex.texture = _PROJECTILE_SPARK_TEXTURE
+        tex.size = Vector2(36.0, 36.0)
+        tex.pivot_offset = Vector2(18.0, 18.0)
+        tex.position = pos - Vector2(18.0, 18.0)
+        var color := _projectile_color(category)
+        tex.modulate = Color(color.r, color.g, color.b, 0.95)
+        tex.scale = Vector2(0.4, 0.4)
+        tex.rotation = randf() * TAU
+        tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        tex.z_index = 11
+        _projectile_layer.add_child(tex)
+        var tw := tex.create_tween().set_parallel(true)
+        tw.tween_property(tex, "scale", Vector2(1.3, 1.3), 0.08) \
+                .set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        tw.tween_property(tex, "modulate:a", 0.0, 0.16) \
+                .set_trans(Tween.TRANS_QUAD)
+        tex.create_tween().tween_callback(tex.queue_free).set_delay(0.18)
+
+# Directional camera kick: player attacks bounce the screen UP, opponent
+# attacks bounce it DOWN. Uses _shake_camera.position:y - ScreenEffects
+# animates _shake_camera.offset, so the two channels never fight.
+func _apply_directional_kick(attacker_side: String) -> void:
+        if _shake_camera == null:
+                return
+        var kick_y := -8.0 if attacker_side == "player" else 8.0
+        var tw := _shake_camera.create_tween()
+        tw.tween_property(_shake_camera, "position:y", kick_y, 0.05) \
+                .set_trans(Tween.TRANS_CIRC).set_ease(Tween.EASE_OUT)
+        tw.tween_property(_shake_camera, "position:y", 0.0, 0.14) \
+                .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+# 0.6s battle-open banner: "YOU vs OPPONENT" pops in with elastic scale,
+# holds, then fades. Non-blocking - the log playback still starts on
+# intro_delay so the banner overlaps the first tick briefly.
+func _play_intro_banner(opp_name: String) -> void:
+        var banner := Label.new()
+        var my_name := String(GameState.display_name).to_upper()
+        if my_name == "":
+                my_name = "YOU"
+        banner.text = "%s\nvs\n%s" % [my_name, opp_name]
+        banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        banner.add_theme_font_size_override("font_size", 44)
+        banner.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        banner.add_theme_color_override("font_outline_color",
+                Color(SynGridPalette.ACCENT_PURPLE, 0.8))
+        banner.add_theme_constant_override("outline_size", 6)
+        banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        banner.z_index = 50
+        banner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        add_child(banner)
+        banner.pivot_offset = size / 2.0
+        banner.modulate.a = 0.0
+        banner.scale = Vector2(0.6, 0.6)
+        var tw := banner.create_tween().set_parallel(true)
+        tw.tween_property(banner, "modulate:a", 1.0, 0.20) \
+                .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        tw.tween_property(banner, "scale", Vector2.ONE, 0.35) \
+                .set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+        # Chain a hold + fade on a fresh tween so it runs after the pop.
+        var out_tw := banner.create_tween()
+        out_tw.tween_interval(0.45)
+        out_tw.tween_property(banner, "modulate:a", 0.0, 0.20) \
+                .set_trans(Tween.TRANS_QUAD)
+        out_tw.tween_callback(banner.queue_free)
+
+# Fatal-blow: full-viewport crimson wash on the shot that drops a life bar
+# to zero. Fades over 0.35s and self-frees. Doesn't block input; z_index
+# keeps it above cards but below the outro banner.
+func _play_killing_blow_effect() -> void:
+        var flash := ColorRect.new()
+        flash.color = Color(SynGridPalette.DANGER.r, SynGridPalette.DANGER.g,
+                SynGridPalette.DANGER.b, 0.45)
+        flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        flash.z_index = 45
+        flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        add_child(flash)
+        var tw := flash.create_tween()
+        tw.tween_property(flash, "modulate:a", 0.0, 0.35) \
+                .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        tw.tween_callback(flash.queue_free)

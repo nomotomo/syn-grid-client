@@ -1,0 +1,101 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/season_hub/SeasonHub.gd" id="1"]
+[ext_resource type="Shader" path="res://assets/shaders/arcane_rune_field.gdshader" id="2_runes"]
+
+[sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
+shader = ExtResource("2_runes")
+shader_parameter/base_color = Color(0.04, 0.04, 0.06, 1)
+shader_parameter/rune_color = Color(0.48, 0.18, 0.75, 1)
+shader_parameter/spark_color = Color(0.0, 0.96, 0.83, 1)
+shader_parameter/pan_speed = 0.03
+shader_parameter/grid_dims = Vector2(6, 12)
+shader_parameter/rune_alpha = 0.22
+shader_parameter/spark_alpha = 0.60
+
+[node name="SeasonHub" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+material = SubResource("RuneFieldMaterial")
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.1, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 72
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 48
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+theme_override_constants/separation = 32
+
+[node name="TitleBlock" type="VBoxContainer" parent="Margin/Layout"]
+theme_override_constants/separation = 4
+
+[node name="TitleLabel" type="Label" parent="Margin/Layout/TitleBlock"]
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 56
+horizontal_alignment = 1
+text = "SEASON HUB"
+
+[node name="SeasonNameLabel" type="Label" parent="Margin/Layout/TitleBlock"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = "SEASON"
+
+[node name="TimerCard" type="PanelContainer" parent="Margin/Layout"]
+
+[node name="TimerBox" type="VBoxContainer" parent="Margin/Layout/TimerCard"]
+theme_override_constants/separation = 8
+
+[node name="TimerCaption" type="Label" parent="Margin/Layout/TimerCard/TimerBox"]
+theme_type_variation = &"HudTitleLabel"
+horizontal_alignment = 1
+text = "SEASON WINDOW"
+
+[node name="SeasonTimerLabel" type="Label" parent="Margin/Layout/TimerCard/TimerBox"]
+unique_name_in_owner = true
+theme_type_variation = &"HudValueLabel"
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "ENDS IN --"
+
+[node name="TriumphCard" type="PanelContainer" parent="Margin/Layout"]
+
+[node name="TriumphBox" type="VBoxContainer" parent="Margin/Layout/TriumphCard"]
+theme_override_constants/separation = 8
+
+[node name="TriumphCaption" type="Label" parent="Margin/Layout/TriumphCard/TriumphBox"]
+theme_type_variation = &"HudTitleLabel"
+horizontal_alignment = 1
+text = "YOUR TRIUMPH"
+
+[node name="TriumphValueLabel" type="Label" parent="Margin/Layout/TriumphCard/TriumphBox"]
+unique_name_in_owner = true
+theme_type_variation = &"HudValueLabel"
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+text = "0"
+
+[node name="RewardsNoteLabel" type="Label" parent="Margin/Layout"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+horizontal_alignment = 1
+text = "REWARDS LADDER - COMING SOON"
+
+[node name="Spacer" type="Control" parent="Margin/Layout"]
+size_flags_vertical = 3
+
+[node name="BackButton" type="Button" parent="Margin/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+theme_override_font_sizes/font_size = 22
+text = "< BACK"
