@@ -84,6 +84,22 @@ func _ready() -> void:
         _projectile_layer.z_index = 8
         add_child(_projectile_layer)
 
+        # Tier C hit-counter footer: sits under the player HP bar and reads
+        # "12 HITS - 3 CRITS - 1 KO". Values pop-scale on change; label is
+        # created here instead of in the .tscn to keep this feature to a
+        # single script commit.
+        _hit_counter_footer = Label.new()
+        _hit_counter_footer.theme_type_variation = &"CaptionLabel"
+        _hit_counter_footer.add_theme_font_size_override("font_size", 14)
+        _hit_counter_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        _hit_counter_footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        _hit_counter_footer.text = ""
+        _hit_counter_footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+        _hit_counter_footer.offset_top = -34.0
+        _hit_counter_footer.offset_bottom = -14.0
+        add_child(_hit_counter_footer)
+        _refresh_hit_counter()
+
         # ScreenEffects shakes by offsetting the current camera; centred at the
         # viewport midpoint the camera reproduces the identity view.
         _shake_camera.anchor_mode = Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT
@@ -252,6 +268,16 @@ func _on_event_played(ev: Dictionary) -> void:
         _spawn_hitmark(impact_pos, crit, shield_absorbed, hp_loss)
         _apply_directional_kick(attacker_side)
 
+        # Tier C: running tally. HIT counts once per event that dealt any
+        # damage/block; CRIT and KO stack on top of that.
+        if hp_loss > 0.0 or shield_absorbed > 0.0:
+                _hit_count += 1
+        if crit:
+                _crit_count += 1
+        if hp_loss > 0.0 and target_hp_after <= 0.0:
+                _ko_count += 1
+        _refresh_hit_counter()
+
         if shield_absorbed > 0.0:
                 AudioManager.play_shield_absorb(impact_pos)
         if hp_loss > 0.0:
@@ -333,6 +359,16 @@ func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, c
         fade.tween_interval(float_fade_start)
         fade.tween_property(label, "modulate:a", 0.0, float_duration - float_fade_start)
         fade.tween_callback(label.queue_free)
+
+        # Tier C: burst of ~4 dot particles behind the damage number so the
+        # float has "impact residue". Colour matches the label so the burst
+        # reads as one unit with the number rising above it.
+        var spark_color: Color
+        if hp_loss > 0.0:
+                spark_color = SynGridPalette.DANGER if crit else SynGridPalette.TEXT_PRIMARY
+        else:
+                spark_color = SynGridPalette.ACCENT_TEAL
+        _spawn_damage_sparks(pos, spark_color, 5 if crit else 3)
 
 # -- Result --
 
@@ -488,6 +524,15 @@ func _update_round_timer_progress(current_tick: int, total_ticks: int) -> void:
 
 const _PROJECTILE_SPARK_TEXTURE: Texture2D = preload("res://assets/sprites/effects/spark.png")
 const _PROJECTILE_HITMARK_TEXTURE: Texture2D = preload("res://assets/sprites/effects/hitmark.png")
+const _PROJECTILE_DOT_TEXTURE: Texture2D = preload("res://assets/sprites/effects/dot.png")
+
+# Session #4 Tier C: running hit/crit/KO tally shown as a footer under the
+# player HP bar. Purely presentation; counters reset when a new fight loads
+# (via reset_hit_counter in _ready fresh state).
+var _hit_count: int = 0
+var _crit_count: int = 0
+var _ko_count: int = 0
+var _hit_counter_footer: Label = null
 
 func _projectile_color(category: String) -> Color:
         # Warm/cool tints so the eye reads category at a glance without needing
@@ -648,3 +693,56 @@ func _play_killing_blow_effect() -> void:
         tw.tween_property(flash, "modulate:a", 0.0, 0.35) \
                 .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
         tw.tween_callback(flash.queue_free)
+
+# Tier C damage-spark burst: 3-5 tiny dot particles shoot outward from the
+# damage float, tumble slightly, and fade over ~0.4s. Cheap on mobile - one
+# TextureRect per particle, all self-freeing.
+func _spawn_damage_sparks(pos: Vector2, color: Color, count: int) -> void:
+        for i in count:
+                var dot := TextureRect.new()
+                dot.texture = _PROJECTILE_DOT_TEXTURE
+                dot.size = Vector2(10.0, 10.0)
+                dot.position = pos - Vector2(5.0, 5.0)
+                dot.modulate = Color(color.r, color.g, color.b, 0.9)
+                dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+                dot.z_index = 9
+                _projectile_layer.add_child(dot)
+                var ang := randf() * TAU
+                var dist := randf_range(22.0, 48.0)
+                var target := pos + Vector2(cos(ang), sin(ang)) * dist
+                var tw := dot.create_tween().set_parallel(true)
+                tw.tween_property(dot, "position", target - Vector2(5.0, 5.0), 0.38) \
+                        .set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+                tw.tween_property(dot, "modulate:a", 0.0, 0.40) \
+                        .set_trans(Tween.TRANS_QUAD)
+                tw.tween_property(dot, "scale", Vector2(0.3, 0.3), 0.40)
+                dot.create_tween().tween_callback(dot.queue_free).set_delay(0.44)
+
+# Tier C hit counter footer refresh. Composes "N HITS - N CRITS - N KOs" and
+# pop-scales the footer label on any change so the number nudges register in
+# peripheral vision without needing focused reading.
+func _refresh_hit_counter() -> void:
+        if _hit_counter_footer == null:
+                return
+        var pieces: Array[String] = []
+        pieces.append("%d HITS" % _hit_count)
+        if _crit_count > 0:
+                pieces.append("%d CRIT%s" % [_crit_count, "S" if _crit_count != 1 else ""])
+        if _ko_count > 0:
+                pieces.append("%d KO%s" % [_ko_count, "S" if _ko_count != 1 else ""])
+        _hit_counter_footer.text = "  -  ".join(pieces)
+        # Colour the footer by the strongest recent event: any KO => DANGER,
+        # any crit => amber-ish (ACCENT_AMBER), else dim parchment.
+        var color: Color
+        if _ko_count > 0:
+                color = SynGridPalette.DANGER
+        elif _crit_count > 0:
+                color = SynGridPalette.ACCENT_AMBER
+        else:
+                color = SynGridPalette.TEXT_DIM
+        _hit_counter_footer.add_theme_color_override("font_color", color)
+        _hit_counter_footer.pivot_offset = _hit_counter_footer.size / 2.0
+        _hit_counter_footer.scale = Vector2(1.18, 1.18)
+        _hit_counter_footer.create_tween().tween_property(
+                _hit_counter_footer, "scale", Vector2.ONE, 0.20) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

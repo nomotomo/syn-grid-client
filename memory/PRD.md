@@ -161,17 +161,47 @@ Rendered clean (zero SCRIPT ERRORs on project import):
 - `/screenshots/after4_season_hub.png` — new Season Hub scaffold
 - `/screenshots/after4_combat_replay.png` — combat scene compiles + arcane floors + timer ring (projectile/hitmark/muzzle effects are transient and only render mid-playback — verified via clean parse but not in a still)
 
-### Prioritised backlog (post-session-4)
+## Session #5 — Tier C battle upgrades + improvements.md  (Jan 2026)
 
-**P2 remaining**
-- Tier C battle upgrades (spark trails behind damage floats, live hit-counter footer) — deferred per user's credit-saving pick
+### Tier C battle upgrades shipped
 
-**P3 / Future**
-- Custom cursor set (arrow / grab / forbidden)
-- Signal-strength bars near the LINKING status
-- Per-tier item-icon rarity halo behind the sprite
-- Codex screen from the PROFILE tab - a scrollable grimoire of every discovered item
-- Real Season Hub content once the server endpoints exist (rewards ladder, past-season history, opt-in cosmetics)
+1. **Damage-spark bursts behind floats** — `_spawn_damage_sparks(pos, color, count)` fires 3 dots on normal hits, 5 on crits from the damage-float position outward on random angles at 22–48 px, scaling `1.0 → 0.3` and fading over 0.40 s with `TRANS_QUART` ease-out. Uses the existing `assets/sprites/effects/dot.png`. Colour matches the float: crimson on crit, parchment on normal HP, teal on shield block.
+2. **Live hit-counter footer** — new `_hit_counter_footer: Label` created in `_ready()`, anchored `PRESET_BOTTOM_WIDE` with a −34 px offset from the bottom. Displays `N HITS · N CRITS · N KOs` (pieces only appear when the count is >0). Colour ramps by severity: `TEXT_DIM` at baseline, `ACCENT_AMBER` after first crit, `DANGER` after first KO. Every increment triggers a `1.18 → 1.0` elastic scale-pop so peripheral vision picks up the change.
+
+Counters (`_hit_count`, `_crit_count`, `_ko_count`) live as scene-local state, incremented in `_on_event_played()` alongside the existing effect calls. HIT = any event with `hp_loss > 0 OR shield_absorbed > 0`; CRIT stacks on top when `crit == true`; KO stacks when `hp_loss > 0 AND target_hp_after <= 0`.
+
+### `docs/improvements.md` — living backlog document
+
+New 11-section markdown at `/app/docs/improvements.md` covering:
+
+- **Recap** of everything Sessions 1–5 shipped
+- **Difficulty legend** (XS / S / M / L / XL)
+- **1. Battle Page** — 6 upgrades (slow-motion killing blow, item shake on damage, combat log ticker, item shatter, rewind scrubber, crit zoom-in)
+- **2. Grid Prep** — 6 upgrades (synergy preview, best-slot hint, auto-arrange, item compare tooltip, recycler sell preview, synergy activation pulse)
+- **3. Main Menu / Meta** — 5 upgrades (Codex screen, rewards ladder preview, rune motif picker, callsign polish, resume-round banner)
+- **4. Leaderboard** — 4 upgrades (rank-change indicator, filter chips, tap-row profile card, medallion pulse)
+- **5. Round-End** — 4 upgrades (victory typewriter, triumph orb fly-in, defeat desaturation shader, milestone celebration)
+- **6. Audio** — 4 upgrades (BGM crossfade, full SFX matrix, crit ducking, defeat LPF)
+- **7. Accessibility & UX** — 5 upgrades (reduced motion, high-contrast palette, colour-blind crits, tablet tap targets, haptics)
+- **8. Performance / Tech Debt** — 5 items (Godot 4.7→4.5 pin decision, screenshot import cleanup, shader param consolidation, tween safety, sprite atlas)
+- **9. Retention / Business Wins** — 5 zero-server ideas (daily login streak, onboarding tour, share-your-grid screenshot, daily challenge, rank-moved toast)
+- **10. Fresh polish ideas** — 5 items (card foil animation for high-tier drops, announcer voice-over stubs, level-up flash, loading-screen lore tips, aurora hue A/B)
+- **11. My picks** — three curated combos (**"Fight feels alive"**, **"Meta hooks"**, **"Feels premium"**) with per-combo cost + rationale
+
+Each item lists difficulty, files touched, and the player-facing win. Pick single items, combos, or whole sections.
+
+### Files changed / added
+- `scenes/combat_replay/CombatReplayScene.gd` (`_PROJECTILE_DOT_TEXTURE` const, counter state, footer label, `_spawn_damage_sparks`, `_refresh_hit_counter`, event-handler counter increments, `_spawn_damage_float` calls sparks)
+- `docs/improvements.md` (new)
+- `memory/PRD.md` (this section)
+
+### Proof
+- `/screenshots/after5_combat_replay.png` — hit counter footer visible at bottom: `"16 HITS  -  2 CRITS"` in amber, confirming counters increment + colour ramps activate.
+- Zero SCRIPT ERRORs on project import.
+
+### Prioritised backlog (post-session-5)
+
+**All active P2 items are cleared.** Future work now lives in `/app/docs/improvements.md`, organised by scene + business impact so any single item or curated combo can be picked up as a standalone commit.
 
 ## What is NOT working / not touched
 - **Vulkan → OpenGL 3 fallback** on the preview pod (no GPU) triggers a benign console warning during proof render; production Android target uses Vulkan Mobile and is unaffected.
