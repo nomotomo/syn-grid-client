@@ -24,7 +24,7 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 
 # Drag-and-drop tilt (juice_manual.md section 2).
 @export var drag_tilt_scale: float = 0.04
-@export var drag_tilt_max: float = 0.35
+@export var drag_tilt_max: float = deg_to_rad(15.0)
 @export var drag_lerp_weight: float = 0.65
 @export var drag_spring_duration: float = 0.15
 @export var drag_threshold_px: float = 6.0
@@ -149,6 +149,14 @@ func _begin_drag() -> void:
 	add_theme_stylebox_override("panel", _drag_style)
 	_tween_scale(Vector2(drag_lift_scale, drag_lift_scale), scale_pop_duration, Tween.TRANS_ELASTIC)
 	drag_started.emit(self)
+
+## Scene-level recovery when a release event is missed or a new drag supersedes
+## this one. No-op if the card is not mid-drag.
+func force_end_drag(drop_global_pos: Vector2) -> void:
+	if not _dragging:
+		return
+	_dragging = false
+	_end_drag(drop_global_pos)
 
 func _end_drag(drop_global_pos: Vector2) -> void:
 	add_theme_stylebox_override("panel", _rest_style)
