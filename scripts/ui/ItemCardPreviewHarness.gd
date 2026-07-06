@@ -10,6 +10,10 @@ const SAMPLE_ITEMS: Array[Dictionary] = [
 	{"name": "Longbow", "weapon_category": "RANGED", "buy_price": 4},
 	{"name": "Arcane Staff", "weapon_category": "ARCANE", "buy_price": 5},
 	{"name": "Iron Buckler", "weapon_category": "", "level": 3},
+	{"name": "Ember Wand", "weapon_category": "ARCANE", "buy_price": 9},
+	{"name": "Iron Sword", "weapon_category": "MELEE", "buy_price": 6},
+	{"name": "Healing Draught", "weapon_category": "", "buy_price": 2},
+	{"name": "Leather Armor", "weapon_category": "", "buy_price": 4},
 	# Permanent fallback regression: no matching sprite file for this name.
 	{"name": "Mystery Blade", "weapon_category": "MELEE", "buy_price": 99},
 ]

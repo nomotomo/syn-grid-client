@@ -230,6 +230,7 @@ func _make_rank_badge(rank: int) -> Control:
 	if path != "" and ResourceLoader.exists(path):
 		var tex := TextureRect.new()
 		tex.texture = load(path)
+		tex.self_modulate = BADGE_FALLBACK_COLORS.get(rank, SynGridPalette.GOLD)
 		tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex.set_anchors_preset(Control.PRESET_FULL_RECT)
