@@ -5,10 +5,12 @@
   ],
   "hud_glyphs": {
     "assets/sprites/ui/icon_gold.png": {
+      "cainos_rpg": "Misc/Golden Coin.png",
       "kenney_game_icons": "PNG/Black/2x/coin.png",
       "fallback": "procedural_coin"
     },
     "assets/sprites/ui/icon_life.png": {
+      "cainos_rpg": "Misc/Heart.png",
       "kenney_game_icons": "PNG/Black/2x/heart.png",
       "fallback": "procedural_heart"
     },
@@ -34,22 +36,42 @@
   "item_icons": {
     "assets/sprites/items/icon_melee_shortsword.png": {
       "akari21_rpg": "shortsword.png",
-      "cainos_rpg": "Weapon & Tool/sword.png",
+      "cainos_rpg": "Weapon & Tool/Iron Sword.png",
       "fallback": "procedural_melee_shortsword"
     },
     "assets/sprites/items/icon_ranged_longbow.png": {
       "akari21_rpg": "longbow.png",
-      "cainos_rpg": "Weapon & Tool/bow.png",
+      "cainos_rpg": "Weapon & Tool/Bow.png",
       "fallback": "procedural_ranged_longbow"
     },
     "assets/sprites/items/icon_arcane_arcane_staff.png": {
       "akari21_rpg": "staff.png",
-      "cainos_rpg": "Weapon & Tool/staff.png",
+      "cainos_rpg": "Weapon & Tool/Wooden Staff.png",
       "fallback": "procedural_arcane_arcane_staff"
     },
     "assets/sprites/items/icon_shield_iron_buckler.png": {
       "akari21_rpg": "buckler.png",
-      "cainos_rpg": "Equipment/shield.png",
+      "cainos_rpg": "Weapon & Tool/Iron Shield.png",
+      "fallback": "procedural_shield_iron_buckler"
+    },
+    "assets/sprites/items/icon_arcane_ember_wand.png": {
+      "akari21_rpg": "ember_wand.png",
+      "cainos_rpg": "Weapon & Tool/Magic Wand.png",
+      "fallback": "procedural_arcane_arcane_staff"
+    },
+    "assets/sprites/items/icon_shield_healing_draught.png": {
+      "cainos_rpg": "Potion/Red Potion.png",
+      "akari21_rpg": "healing_draught.png",
+      "fallback": "procedural_shield_iron_buckler"
+    },
+    "assets/sprites/items/icon_melee_iron_sword.png": {
+      "akari21_rpg": "iron_sword.png",
+      "cainos_rpg": "Weapon & Tool/Iron Sword.png",
+      "fallback": "procedural_melee_shortsword"
+    },
+    "assets/sprites/items/icon_shield_leather_armor.png": {
+      "cainos_rpg": "Equipment/Leather Armor.png",
+      "akari21_rpg": "leather_armor.png",
       "fallback": "procedural_shield_iron_buckler"
     }
   }
