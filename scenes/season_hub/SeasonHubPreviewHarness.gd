@@ -12,10 +12,12 @@ func _ready() -> void:
 	if screenshot_path == "":
 		return
 	# Inject fake season/triumph state so the scaffold hydrates.
-	if "current_season_name" in GameState:
-		GameState.set("current_season_name", "SEASON XII - EMBER")
-	if "season_end_ts" in GameState:
-		GameState.set("season_end_ts", int(Time.get_unix_time_from_system()) + 3 * 86400 + 5 * 3600)
+	GameState.season = {
+		"season_id": 12,
+		"name": "Season XII - Ember",
+		"ends_at_unix": int(Time.get_unix_time_from_system()) + 3 * 86400 + 5 * 3600,
+		"caller_rank": 42,
+	}
 	GameState.triumph_count = 128
 	hub._refresh()
 	for _i in 30:
