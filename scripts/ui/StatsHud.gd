@@ -20,6 +20,10 @@ extends HBoxContainer
 @onready var _gold_panel: PanelContainer = %GoldPanel
 @onready var _life_panel: PanelContainer = %LifePanel
 @onready var _triumph_panel: PanelContainer = %TriumphPanel
+@onready var _round_accent: ColorRect = %RoundAccentBar
+@onready var _gold_accent: ColorRect = %GoldAccentBar
+@onready var _life_accent: ColorRect = %LifeAccentBar
+@onready var _triumph_accent: ColorRect = %TriumphAccentBar
 @onready var _round_value: Label = %RoundValue
 @onready var _gold_value: Label = %GoldValue
 @onready var _life_value: Label = %LifeValue
@@ -39,6 +43,10 @@ func _ready() -> void:
 	_gold_panel.tooltip_text = "GOLD\nSpent at the shop each round to buy items or refresh the roster."
 	_life_panel.tooltip_text = "LIFE\nEach lost match subtracts one life. Reach zero and the season resets."
 	_triumph_panel.tooltip_text = "TRIUMPH\nSeason score. Earned by winning matches; climbs the leaderboard."
+	_round_accent.color = SynGridPalette.ACCENT_SILVER
+	_gold_accent.color = SynGridPalette.GOLD
+	_life_accent.color = SynGridPalette.HP_HIGH
+	_triumph_accent.color = SynGridPalette.ACCENT_PURPLE
 	_gold_value.add_theme_color_override("font_color", SynGridPalette.GOLD)
 	_triumph_value.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
 	refresh()

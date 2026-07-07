@@ -334,7 +334,7 @@ func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, c
         if hp_loss > 0.0:
                 label.text = str(int(round(hp_loss)))
                 label.add_theme_color_override("font_color",
-                        Color(0.85, 0.10, 0.10) if crit else SynGridPalette.TEXT_PRIMARY)
+                        SynGridPalette.DANGER if crit else SynGridPalette.TEXT_PRIMARY)
         elif shield_absorbed > 0.0:
                 label.text = "BLOCKED"
                 label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
@@ -345,7 +345,8 @@ func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, c
                 label.add_theme_color_override("font_outline_color", Color(0.1, 0.0, 0.0))
                 label.add_theme_constant_override("outline_size", 6)
         _float_layer.add_child(label)
-        label.global_position = pos
+        label.reset_size()
+        label.global_position = pos - label.size / 2.0
         label.pivot_offset = label.size / 2.0
         if crit:
                 label.scale = Vector2(crit_float_scale, crit_float_scale)
@@ -535,17 +536,7 @@ var _ko_count: int = 0
 var _hit_counter_footer: Label = null
 
 func _projectile_color(category: String) -> Color:
-        # Warm/cool tints so the eye reads category at a glance without needing
-        # to look at the source card.
-        match category:
-                "RANGED":
-                        return Color(0.35, 0.85, 0.35)
-                "ARCANE":
-                        return SynGridPalette.ACCENT_PURPLE
-                "MELEE":
-                        return Color(0.95, 0.35, 0.30)
-                _:
-                        return SynGridPalette.ACCENT_TEAL
+        return SynGridPalette.tint_for_weapon_category(category)
 
 # RANGED / ARCANE fires spawn a tapered Line2D that flies from the firer's
 # card centre to the impact point over one tick (0.10s), then fades. MELEE
@@ -574,7 +565,8 @@ func _spawn_projectile(from_pos: Vector2, target_pos: Vector2,
                 .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
         tw.tween_method(func(v: Vector2) -> void:
                 line.set_point_position(0, v),
-                from_pos, target_pos, travel + 0.06).set_delay(0.02)
+                from_pos, target_pos, travel + 0.06).set_delay(0.02) \
+                .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
         tw.tween_property(line, "modulate:a", 0.0, 0.14).set_delay(travel + 0.02)
         line.create_tween().tween_callback(line.queue_free).set_delay(travel + 0.22)
 
@@ -715,7 +707,7 @@ func _spawn_damage_sparks(pos: Vector2, color: Color, count: int) -> void:
                         .set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
                 tw.tween_property(dot, "modulate:a", 0.0, 0.40) \
                         .set_trans(Tween.TRANS_QUAD)
-                tw.tween_property(dot, "scale", Vector2(0.3, 0.3), 0.40)
+                tw.tween_property(dot, "scale", Vector2(0.3, 0.3), 0.40).set_trans(Tween.TRANS_QUAD)
                 dot.create_tween().tween_callback(dot.queue_free).set_delay(0.44)
 
 # Tier C hit counter footer refresh. Composes "N HITS - N CRITS - N KOs" and

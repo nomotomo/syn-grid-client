@@ -23,10 +23,10 @@ theme_override_constants/margin_right = 4
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AccentBar" type="ColorRect" parent="RoundPanel/Inner/HBox"]
+[node name="RoundAccentBar" type="ColorRect" parent="RoundPanel/Inner/HBox"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(4, 40)
 mouse_filter = 2
-color = Color(0.72, 0.77, 0.82, 1)
 
 [node name="RoundIcon" type="TextureRect" parent="RoundPanel/Inner/HBox"]
 custom_minimum_size = Vector2(28, 28)
@@ -62,10 +62,10 @@ theme_override_constants/margin_right = 4
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AccentBar" type="ColorRect" parent="GoldPanel/Inner/HBox"]
+[node name="GoldAccentBar" type="ColorRect" parent="GoldPanel/Inner/HBox"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(4, 40)
 mouse_filter = 2
-color = Color(0.95, 0.78, 0.29, 1)
 
 [node name="GoldIcon" type="TextureRect" parent="GoldPanel/Inner/HBox"]
 custom_minimum_size = Vector2(28, 28)
@@ -101,10 +101,10 @@ theme_override_constants/margin_right = 4
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AccentBar" type="ColorRect" parent="LifePanel/Inner/HBox"]
+[node name="LifeAccentBar" type="ColorRect" parent="LifePanel/Inner/HBox"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(4, 40)
 mouse_filter = 2
-color = Color(0.0, 0.96, 0.83, 1)
 
 [node name="LifeIcon" type="TextureRect" parent="LifePanel/Inner/HBox"]
 custom_minimum_size = Vector2(28, 28)
@@ -140,10 +140,10 @@ theme_override_constants/margin_right = 4
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="AccentBar" type="ColorRect" parent="TriumphPanel/Inner/HBox"]
+[node name="TriumphAccentBar" type="ColorRect" parent="TriumphPanel/Inner/HBox"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(4, 40)
 mouse_filter = 2
-color = Color(0.48, 0.18, 0.75, 1)
 
 [node name="TriumphIcon" type="TextureRect" parent="TriumphPanel/Inner/HBox"]
 unique_name_in_owner = true
