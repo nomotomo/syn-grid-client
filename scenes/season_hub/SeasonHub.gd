@@ -6,8 +6,7 @@ class_name SeasonHubScene
 # rewards ladder that Phase C9+ will populate. Non-interactive for now
 # beyond the BACK button - safe to ship as a "COMING SOON" preview.
 #
-# Contract: reads GameState.current_season_name, GameState.season_end_ts,
-# GameState.triumph_count. Never mutates state; the real Season Hub
+# Contract: reads GameState.season, GameState.triumph_count. Never mutates state; the real Season Hub
 # gameplay will land with the server's season endpoints in a later phase.
 
 @onready var _back_btn: Button = %BackButton
@@ -30,18 +29,19 @@ func _ready() -> void:
 	add_child(_tick_timer)
 
 func _refresh() -> void:
-	var season_name := String(GameState.get("current_season_name")) if "current_season_name" in GameState else "SEASON"
-	if season_name == "":
-		season_name = "SEASON"
-	_season_name.text = season_name.to_upper()
+	if GameState.season.is_empty():
+		_season_name.text = "NO ACTIVE SEASON"
+		_season_timer.text = ""
+	else:
+		_season_name.text = String(GameState.season.get("name", "")).to_upper()
+		_season_timer.text = _format_countdown()
 	_triumph_value.text = str(GameState.triumph_count)
-	_season_timer.text = _format_countdown()
 	_rewards_note.text = "REWARDS LADDER - COMING SOON"
 
 func _format_countdown() -> String:
-	if not "season_end_ts" in GameState:
+	var end_ts: int = int(GameState.season.get("ends_at_unix", 0))
+	if end_ts == 0:
 		return "SEASON END - TBA"
-	var end_ts := int(GameState.get("season_end_ts"))
 	var now_ts := int(Time.get_unix_time_from_system())
 	var remaining: int = max(0, end_ts - now_ts)
 	if remaining <= 0:
