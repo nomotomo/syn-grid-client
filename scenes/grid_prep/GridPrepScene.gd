@@ -363,6 +363,7 @@ func _request_round_grant() -> void:
 func _on_award_round_gold_completed(data: Dictionary) -> void:
 	GameState.gold_awarded_round = GameState.current_round
 	GameState.gold = int(data.get("new_balance", GameState.gold))
+	AudioManager.play_coin_earn()
 	_stats_hud.refresh()
 	_update_affordability()
 	_status_label.text = "ROUND GRANT +%dG" % int(data.get("gold_awarded", 0))
@@ -445,6 +446,9 @@ func _on_purchase_item_completed(data: Dictionary) -> void:
 	else:
 		AudioManager.play_grid_snap()
 		_status_label.text = "REQUISITIONED"
+	# Gold is spent whether or not the buy triggered a merge, so the coin-spend
+	# cue fires unconditionally after the merge/no-merge branch, not inside it.
+	AudioManager.play_coin_spend()
 
 func _on_purchase_item_failed(_code: int, reason: String) -> void:
 	_purchase_in_flight = false
@@ -604,6 +608,8 @@ func _sell_card(card: ItemCard) -> void:
 func _on_sell_item_completed(data: Dictionary) -> void:
 	var credited := int(data.get("new_balance", GameState.gold)) - GameState.gold
 	GameState.gold = int(data.get("new_balance", GameState.gold))
+	if credited > 0:
+		AudioManager.play_coin_earn()
 	GameState.sync_bench_from_server(data.get("updated_grid", {}).get("bench_reserve", []))
 	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
 	_maybe_rebuild_grid_from_state()

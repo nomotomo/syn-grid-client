@@ -79,4 +79,6 @@ func _save_and_quit(screenshot_path: String) -> void:
 			print("auto-verify: no image buffer (headless) - skipping screenshot")
 	else:
 		print("auto-verify: no viewport texture (headless) - skipping screenshot")
+	# Issue #15: flush BGM before quit so bgm_prep.wav is not leaked at exit.
+	await AudioManager.release_bgm_before_quit()
 	get_tree().quit()

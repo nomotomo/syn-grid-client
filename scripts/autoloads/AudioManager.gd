@@ -4,6 +4,8 @@ extends Node
 
 @export var bgm_fade_duration: float = 0.8
 @export var sfx_cache_size: int = 32    # max concurrent cached SFX resources
+@export var crit_duck_db: float = -6.0
+@export var crit_duck_duration: float = 0.2
 
 const SFX_PATHS: Dictionary = {
 	"shop_reroll":      "res://assets/audio/sfx/sfx_shop_reroll.wav",
@@ -20,10 +22,19 @@ const SFX_PATHS: Dictionary = {
 	"triple_merge":     "res://assets/audio/sfx/sfx_triple_merge.wav",
 	"win_round":        "res://assets/audio/sfx/sfx_win_round.wav",
 	"triumph_milestone":"res://assets/audio/sfx/sfx_triumph_milestone.wav",
+	"coin_earn":        "res://assets/audio/sfx/sfx_coin_earn.wav",
+	"coin_spend":       "res://assets/audio/sfx/sfx_coin_spend.wav",
+	"triumph_earn":     "res://assets/audio/sfx/sfx_triumph_earn.wav",
+	"defeat_stinger":   "res://assets/audio/sfx/sfx_defeat_stinger.wav",
+	"victory_fanfare":  "res://assets/audio/sfx/sfx_victory_fanfare.wav",
 }
 
 const BGM_PREP:   String = "res://assets/audio/bgm/bgm_prep.wav"
 const BGM_COMBAT: String = "res://assets/audio/bgm/bgm_combat.wav"
+
+# Every dynamically-created one-shot SFX player joins this group so they can be
+# force-stopped and freed on shutdown, not just via finished -> queue_free.
+const SFX_PLAYER_GROUP: StringName = &"syngrid_sfx_players"
 
 var _bgm_a: AudioStreamPlayer
 var _bgm_b: AudioStreamPlayer
@@ -33,6 +44,8 @@ var _current_bgm_path: String = ""
 var _sfx_cache: Dictionary = {}
 var _pending_loads: Dictionary = {}   # key -> path currently in threaded load
 var _pending_plays: Array[Dictionary] = []  # plays requested before load finished
+var _duck_tween: Tween = null
+var _bgm_base_db: float = 0.0
 
 func _ready() -> void:
 	# The project ships no default_bus_layout.tres (same no-hand-authored-
@@ -47,6 +60,63 @@ func _ready() -> void:
 	add_child(_bgm_b)
 	_active_bgm = _bgm_a
 	set_process(false)   # only polls while a threaded SFX load is pending
+	# Issue #15: a playing AudioStreamPlayer.stream (bgm_prep.wav) holds a live
+	# reference past get_tree().quit(). The players are children of this autoload,
+	# so on shutdown they are freed *before* this node's own _exit_tree runs -
+	# too late to stop them from here. Each player's tree_exiting fires while it
+	# is still valid, which is the correct point to stop playback and drop the
+	# stream so the AudioStreamWAV/AudioStreamPlaybackWAV are not leaked at exit.
+	_bgm_a.tree_exiting.connect(release_bgm_streams)
+	_bgm_b.tree_exiting.connect(release_bgm_streams)
+
+# Stops all playback (both BGM players and every live one-shot SFX player) and
+# drops their stream references. Connected to each BGM player's tree_exiting so
+# refs are released on teardown; also callable directly by the dev preview
+# harnesses right before get_tree().quit() so nothing is reported as a leaked
+# AudioStreamWAV at process exit (issue #15). SFX players normally self-free via
+# finished -> queue_free, but a quit or scene unload before a sound finishes
+# would otherwise leak them, so they are force-stopped here too.
+func release_bgm_streams() -> void:
+	_kill_bgm_tween()
+	for player in [_bgm_a, _bgm_b]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	var tree := get_tree()
+	if tree == null:
+		return
+	for node in tree.get_nodes_in_group(SFX_PLAYER_GROUP):
+		if is_instance_valid(node):
+			node.stop()
+			node.stream = null
+			node.queue_free()
+
+# Call from dev preview harnesses immediately before get_tree().quit(). Stops all
+# audio, frees the BGM player nodes, then yields a short wall-clock interval.
+# Stopping and nulling the stream alone does not reliably release the *active*
+# playback before the process-exit leak check (the AudioServer thread still holds
+# it); freeing the player node plus giving the mixer real time to flush releases
+# it deterministically, regardless of audio-thread timing (issue #15 - reproduced
+# on a full prep->combat->prep sequence).
+func release_bgm_before_quit() -> void:
+	release_bgm_streams()
+	for player in [_bgm_a, _bgm_b]:
+		if is_instance_valid(player):
+			# Disconnect the teardown handler first so freeing the player does not
+			# re-enter release_bgm_streams mid-destruction.
+			if player.tree_exiting.is_connected(release_bgm_streams):
+				player.tree_exiting.disconnect(release_bgm_streams)
+			player.free()
+	_bgm_a = null
+	_bgm_b = null
+	_active_bgm = null
+	# Yield real wall-clock time, not just process frames: under --headless the
+	# main loop iterates near-instantly, so counting frames gives the AudioServer
+	# mixer thread no time to release the freed players' playback before the
+	# process-exit leak check. A short timer lets the mixer flush deterministically.
+	var tree := get_tree()
+	if tree != null:
+		await tree.create_timer(0.3).timeout
 
 func play_prep_bgm() -> void:
 	_crossfade_bgm(BGM_PREP)
@@ -73,12 +143,36 @@ func play_item_drag() -> void:               _play_sfx("item_drag")
 func play_melee_strike(pos: Vector2) -> void: _play_sfx_2d("melee_strike", pos)
 func play_ranged_strike(pos: Vector2) -> void:_play_sfx_2d("ranged_strike", pos)
 func play_arcane_strike(pos: Vector2) -> void:_play_sfx_2d("arcane_strike", pos)
-func play_crit_hit(pos: Vector2) -> void:    _play_sfx_2d("crit_hit", pos)
+func play_crit_hit(pos: Vector2) -> void:
+	_play_sfx_2d("crit_hit", pos)
+	_duck_bgm()
 func play_shield_absorb(pos: Vector2) -> void:_play_sfx_2d("shield_absorb", pos)
 func play_hp_loss() -> void:                 _play_sfx("hp_loss")
 func play_triple_merge() -> void:            _play_sfx("triple_merge")
 func play_win_round() -> void:               _play_sfx("win_round")
 func play_triumph_milestone() -> void:       _play_sfx("triumph_milestone")
+func play_coin_earn() -> void:               _play_sfx("coin_earn")
+func play_coin_spend() -> void:              _play_sfx("coin_spend")
+func play_triumph_earn() -> void:            _play_sfx("triumph_earn")
+func play_defeat_stinger() -> void:          _play_sfx("defeat_stinger")
+func play_victory_fanfare() -> void:         _play_sfx("victory_fanfare")
+
+# Crit BGM ducking (juice_manual.md §5): dip the BGM bus -6dB for 200ms so the
+# crit stinger cuts through, then restore. Capturing _bgm_base_db only on a
+# fresh duck (not mid-duck) prevents back-to-back crits within crit_duck_duration
+# from latching the already-ducked level as the new baseline.
+func _duck_bgm() -> void:
+	var bus_idx := AudioServer.get_bus_index("BGM")
+	var base_db := AudioServer.get_bus_volume_db(bus_idx)
+	if _duck_tween != null and _duck_tween.is_valid():
+		_duck_tween.kill()
+	else:
+		_bgm_base_db = base_db
+	AudioServer.set_bus_volume_db(bus_idx, _bgm_base_db + crit_duck_db)
+	_duck_tween = create_tween()
+	_duck_tween.tween_interval(crit_duck_duration)
+	_duck_tween.tween_callback(func() -> void:
+		AudioServer.set_bus_volume_db(bus_idx, _bgm_base_db))
 
 func play_fatal_hp_loss() -> void:
 	_play_sfx("fatal_hp_loss")
@@ -111,13 +205,19 @@ func _crossfade_bgm(path: String) -> void:
 	if stream == null:
 		return
 	_current_bgm_path = path
+	# Cancel any in-flight fade first. Killing the tween also cancels its chained
+	# `outgoing.stop` callback, so the player it was about to stop may still be
+	# looping - that player is exactly the one we are about to reuse below, so we
+	# stop it explicitly before restarting it. Without this, a superseded
+	# crossfade leaves a track looping forever at -80dB (issue #15 root cause).
+	_kill_bgm_tween()
 	var inactive := _bgm_b if _active_bgm == _bgm_a else _bgm_a
 	var outgoing := _active_bgm
+	inactive.stop()
 	_active_bgm = inactive
 	inactive.stream = stream
 	inactive.volume_db = -80.0
 	inactive.play()
-	_kill_bgm_tween()
 	_bgm_tween = create_tween().set_parallel(true)
 	_bgm_tween.tween_property(outgoing, "volume_db", -80.0, bgm_fade_duration)
 	_bgm_tween.tween_property(inactive, "volume_db", 0.0, bgm_fade_duration)
@@ -155,6 +255,7 @@ func _play_sfx(key: String, pitch: float = 1.0) -> void:
 	player.stream = stream
 	player.pitch_scale = pitch
 	add_child(player)
+	player.add_to_group(SFX_PLAYER_GROUP)
 	player.play()
 	player.finished.connect(player.queue_free)
 
@@ -169,6 +270,7 @@ func _play_sfx_2d(key: String, pos: Vector2, pitch: float = 1.0) -> void:
 	player.global_position = pos
 	player.pitch_scale = pitch
 	add_child(player)
+	player.add_to_group(SFX_PLAYER_GROUP)
 	player.play()
 	player.finished.connect(player.queue_free)
 

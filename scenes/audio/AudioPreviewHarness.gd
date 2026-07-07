@@ -20,6 +20,11 @@ const SFX_METHODS: Array[String] = [
 	"play_triple_merge",
 	"play_win_round",
 	"play_triumph_milestone",
+	"play_coin_earn",
+	"play_coin_spend",
+	"play_triumph_earn",
+	"play_defeat_stinger",
+	"play_victory_fanfare",
 ]
 
 func _ready() -> void:
@@ -57,6 +62,7 @@ func _run() -> void:
 	print("auto-verify: bgm_effects_after=", effects_after)
 	print("auto-verify: lpf_cleared=", effects_after == effects_before)
 	print("auto-verify: sfx_cache_size=", AudioManager._sfx_cache.size())
+	await AudioManager.release_bgm_before_quit()
 	get_tree().quit(0 if effects_after == effects_before else 1)
 
 func _call_sfx(method_name: String) -> void:

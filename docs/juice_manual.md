@@ -159,6 +159,18 @@ Swap between tracks with a `0.8s` cross-fade using two `AudioStreamPlayer` nodes
 | Triple-merge | Rising chime + particle impact | Sonniss: "Magic Shimmer" |
 | Win round | Ascending 3-note victory chime | Custom or itch.io |
 | Triumph milestone | Short fanfare sting | Custom or itch.io |
+| Gold gained (round grant or item sell) | Bright single coin-clink, very short | Custom or itch.io |
+| Gold spent (shop purchase) | Duller, lower-pitched coin drop - the inverse of gold-gained, not a variation of it | Custom or itch.io |
+| Triumph point earned (per round win, non-milestone) | Soft single tick/ping, subordinate in loudness to Triumph milestone | Custom or itch.io |
+| Run ends in elimination | Short low-register stinger, layered with the Fatal HP loss sweep, not replacing it | Custom or itch.io |
+| Run won outright (triumph cap reached) | Bigger, longer fanfare than Triumph milestone - the single biggest moment in a run | Custom or itch.io |
+
+Added 2026-07-07 (issue #30 architect pass): the five rows above close a real feedback gap (gold changes
+and run-completion had no dedicated audio) found while auditing this matrix against the shipped code.
+`timer_tick_low` (proposed in `improvements.md` §6.2) is deliberately not added - this game has no
+real-time player-facing countdown; the combat "round timer ring" visualizes deterministic tick-progress
+during an already-resolved replay, not a live decision clock, so there is no honest trigger for a
+countdown-urgency tick. Do not add it without a genuine trigger point.
 
 ### Audio Implementation Rules
 
