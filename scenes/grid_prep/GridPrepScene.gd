@@ -50,6 +50,7 @@ const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatRepla
 @onready var _hub_button: Button = %HubButton
 
 var _cells: Array[GridCell] = []
+var _coord_labels: Array[Label] = []
 var _cards_by_item_id: Dictionary = {}
 var _synergy_borders: Array[SynergyBorder] = []
 var _known_synergy_keys: Dictionary = {}
@@ -163,18 +164,18 @@ func _layout_screen() -> void:
 	_bench_row.offset_left = 40.0
 	_bench_row.offset_right = -40.0
 	_bench_row.offset_top = bench_top
-	_bench_row.offset_bottom = bench_top + _layout_cell_size.y
+	_bench_row.offset_bottom = bench_top + cell_size.y
 
 	# Bento backdrop: the bench sits on its own base-elevation panel so it
 	# reads as a separate zone without any harsh divider line (contract s.1).
 	_bench_panel.position = Vector2(24.0, bench_caption_top - 12.0)
-	_bench_panel.size = Vector2(size.x - 48.0, _layout_cell_size.y + caption_gap + 36.0)
+	_bench_panel.size = Vector2(size.x - 48.0, cell_size.y + caption_gap + 36.0)
 	_bench_panel.add_theme_stylebox_override("panel",
 		ThemeBuilder.build_panel_style(SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG))
 	_bench_caption.position = Vector2(40.0, bench_caption_top)
 	_bench_caption.size = Vector2(size.x - 80.0, caption_gap - 12.0)
 
-	var recycler_top := bench_top + _layout_cell_size.y + section_gap
+	var recycler_top := bench_top + cell_size.y + section_gap
 	_recycler_panel.position = Vector2(24.0, recycler_top)
 	_recycler_panel.size = Vector2(size.x - 48.0, recycler_height)
 
@@ -212,8 +213,10 @@ func _build_cells() -> void:
 # Labels are children of %GridArea so they layout relative to the grid's own
 # top-left origin.
 func _build_coord_labels() -> void:
+	for label in _coord_labels:
+		label.queue_free()
+	_coord_labels.clear()
 	var outer := _cell_outer_size()
-	var col_letters := ["A", "B", "C", "D"]
 	for x in grid_columns:
 		var col_label := Label.new()
 		col_label.theme_type_variation = &"CaptionLabel"
@@ -222,10 +225,11 @@ func _build_coord_labels() -> void:
 		col_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		col_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		col_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col_label.text = col_letters[x] if x < col_letters.size() else str(x)
+		col_label.text = char(65 + x)
 		col_label.position = Vector2(x * outer.x, -22.0)
 		col_label.size = Vector2(outer.x, 20.0)
 		_grid_area.add_child(col_label)
+		_coord_labels.append(col_label)
 	for y in grid_rows:
 		var row_label := Label.new()
 		row_label.theme_type_variation = &"CaptionLabel"
@@ -238,6 +242,7 @@ func _build_coord_labels() -> void:
 		row_label.position = Vector2(-24.0, y * outer.y)
 		row_label.size = Vector2(20.0, outer.y)
 		_grid_area.add_child(row_label)
+		_coord_labels.append(row_label)
 
 func _clear_grid_cells() -> void:
 	for cell in _cells:
