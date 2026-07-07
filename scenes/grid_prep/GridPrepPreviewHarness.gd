@@ -178,13 +178,35 @@ func _run_live_verify(screenshot_path: String) -> void:
 			for _i in 45:
 				await get_tree().process_frame
 
-		# Place up to four bench items in a contiguous row to maximize adjacency.
-		for x in [1, 2, 3, 4]:
+		# Place the known pair explicitly adjacent if present.
+		# Server bench ordering is not purchase ordering, so never rely on
+		# bench index 0 here.
+		var filled: Dictionary = {}
+		var sword := _bench_card_for_name("Iron Sword")
+		if sword != null:
+			_auto_place_item_by_card(sword, Vector2i(1, 1))
+			filled["1,1"] = true
+			for _i in 30:
+				await get_tree().process_frame
+		var armor := _bench_card_for_name("Leather Armor")
+		if armor != null:
+			_auto_place_item_by_card(armor, Vector2i(2, 1))
+			filled["2,1"] = true
+			for _i in 30:
+				await get_tree().process_frame
+
+		# Fill remaining contiguous slots with whatever is left on the bench.
+		# Keep x within grid columns (0-indexed).
+		var max_x := maxi(0, GameState.grid_columns - 1)
+		for x in range(1, max_x + 1):
+			var key := "%d,%d" % [x, 1]
+			if filled.has(key):
+				continue
 			if _grid.get_node("%BenchRow").get_child_count() == 0:
 				break
 			var cell: GridCell = _grid._cell_at(x, 1)
 			if cell == null:
-				break
+				continue
 			_auto_place(0, Vector2i(x, 1))
 			for _i in 30:
 				await get_tree().process_frame
