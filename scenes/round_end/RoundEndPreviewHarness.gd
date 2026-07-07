@@ -12,6 +12,9 @@ extends Control
 
 var _scene: RoundEndScene
 
+# Full ceremony: orbs finish ~2.2s wall; one shared frame budget for both verify paths.
+const CEREMONY_SETTLE_FRAMES: int = 150
+
 func _ready() -> void:
 	var screenshot_path := OS.get_environment("SYNGRID_SCREENSHOT")
 	if screenshot_path != "" and OS.get_environment("SYNGRID_LIVE") == "1":
@@ -118,9 +121,7 @@ func _mock_offline_award() -> void:
 	})
 
 func _run_offline_verify(screenshot_path: String) -> void:
-	# Full ceremony: orbs finish ~2.2s wall; 150 frames captures post-orbs state.
-	for _i in 150:
-		await get_tree().process_frame
+	await _await_ceremony_settle()
 	var mode := OS.get_environment("SYNGRID_RESULT")
 	if mode == "":
 		mode = "win"
@@ -204,12 +205,15 @@ func _run_live_verify(screenshot_path: String) -> void:
 
 	print("live-verify: round before=%d after=%d" % [before_round, GameState.current_round])
 	_instance_scene()
-	for _i in 90:
-		await get_tree().process_frame
+	await _await_ceremony_settle()
 	print("live-verify: banner=%s status=%s" % [
 		_scene.get_node("%Banner").text,
 		_scene.get_node("%StatusLabel").text])
 	_save_and_quit(screenshot_path)
+
+func _await_ceremony_settle() -> void:
+	for _i in CEREMONY_SETTLE_FRAMES:
+		await get_tree().process_frame
 
 func _save_and_quit(screenshot_path: String) -> void:
 	var tex := get_viewport().get_texture()
