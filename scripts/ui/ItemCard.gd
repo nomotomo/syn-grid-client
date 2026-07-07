@@ -201,6 +201,14 @@ func play_snap_bounce() -> void:
 	_scale_tween.tween_property(self, "scale:y", 1.0, snap_settle_duration) \
 		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 
+## Combat-replay telemetry hook: parents a decoration (e.g. DamageMeter) inside
+## the plain Content control, not the PanelContainer root. The root runs a
+## container sort pass that calls fit_child_in_rect on every direct child and
+## overrides manual anchors/position; Content is a plain Control, so anchors
+## set from outside stick - the same way every built-in decoration already does.
+func add_overlay(node: Control) -> void:
+	$Content.add_child(node)
+
 func play_shatter() -> void:
 	_kill_scale_tween()
 	var tw := create_tween().set_parallel(true)

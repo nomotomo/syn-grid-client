@@ -268,10 +268,15 @@ func _build_side(side: String, items: Array, container: GridContainer, mirror_x:
                 _cards_by_item_id[item_id] = card
                 _items_by_id[item_id] = item
                 _side_by_item_id[item_id] = side
+                # Parent the meter inside the card's plain Content control (not the
+                # PanelContainer root) via add_overlay, then anchor it as a thin
+                # strip along the bottom edge - a root-child would get its position
+                # overridden by the PanelContainer's sort pass.
                 var meter := DamageMeter.new()
-                meter.custom_minimum_size = Vector2(mini_cell_card_size.x, 6.0)
-                meter.position = Vector2(0.0, mini_cell_card_size.y - 6.0)
-                card.add_child(meter)
+                meter.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+                meter.offset_top = -meter.bar_height
+                meter.offset_bottom = 0.0
+                card.add_overlay(meter)
                 _meters_by_item_id[item_id] = meter
 
 # Display-only initial shield strip: the sum of armor on the visible ARMOR
@@ -500,13 +505,18 @@ func _spawn_synergy_banner(category: String, bonus: float) -> void:
         label.text = "%s SYNERGY +%d DMG" % [category if category != "" else "ITEM", int(round(bonus))]
         label.add_theme_font_size_override("font_size", 14)
         label.add_theme_color_override("font_color", SynGridPalette.tint_for_weapon_category(category))
+        # Wrap within the chip so the text never spills past the viewport edge;
+        # the stack (VBoxContainer) fixes each chip's width, and autowrap folds
+        # the label to fit that width instead of overflowing off-screen.
+        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         chip.add_child(label)
         _synergy_stack.add_child(chip)
+        # Fade in only: tweening position on a VBoxContainer child fights the
+        # container's sort pass (which reasserts child position every layout),
+        # so match the log ticker's modulate-only entrance pattern.
         chip.modulate.a = 0.0
-        chip.position.x = 60.0
-        var tw := chip.create_tween().set_parallel(true)
-        tw.tween_property(chip, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-        tw.tween_property(chip, "position:x", 0.0, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        var tw := chip.create_tween()
+        tw.tween_property(chip, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
         var out_tw := chip.create_tween()
         out_tw.tween_interval(2.0)
         out_tw.tween_property(chip, "modulate:a", 0.0, 0.25).set_trans(Tween.TRANS_QUAD)
