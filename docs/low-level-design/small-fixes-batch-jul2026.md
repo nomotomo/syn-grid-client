@@ -43,7 +43,11 @@ _new_run_button.position = Vector2(40.0, size.y * 0.78)
 
 `_run_live_verify()` (`RoundEndPreviewHarness.gd`, wait at line ~207) uses a 90-frame wait; `_run_offline_verify()` (line 122) uses 150 frames and its own comment documents the full ceremony takes ~2.2s wall (hearts + orbs). The 90-frame live wait fires before the orb ceremony completes, so `SYNGRID_LIVE=1` screenshots can't catch a real regression in that portion - already caused this repo's mandatory dynamic-verification step to be weaker than intended on a past PR.
 
-**Fix**: per the issue's own preferred direction, poll on ceremony completion rather than a hardcoded frame count, so the two verify paths can never drift again:
+**Correction (2026-07-07, after PR #50 review)**: the fix below is wrong and must not be implemented as originally written. It assumed `_continue_button.visible or _new_run_button.visible` only becomes true after `_run_ceremony()` finishes. That's false: `RoundEndScene.gd:_ready()` sets one of the two buttons' `.visible` to `true` **immediately**, before `_run_ceremony()` is even called - the actual reveal is a `scale` tween (`_pop_continue()`/`_pop_terminal_button()`, run at the very end of the ceremony) that this poll condition never looks at. Confirmed dynamically: this poll exits at frame 0 and produces a completely blank screenshot, which is worse than the original bug (fires even before the intro banner pops in). `scale.x >= 0.99` has the identical flaw (`Control.scale` defaults to `Vector2.ONE` before `_pop_continue()` ever touches it).
+
+**Actual fix**: revert to a hardcoded frame count in `_run_live_verify()`, raised to match (or slightly exceed) `_run_offline_verify()`'s own documented 150 frames. This is the issue's own first-listed, simpler option - take it. A true event-driven completion signal (`ceremony_finished`, emitted after awaiting the reveal tween in `_pop_continue()`/`_pop_terminal_button()`) would be the more correct long-term fix, but it changes `RoundEndScene`'s production contract and isn't warranted just to unblock this small harness-timing bug - only worth doing if event-driven sync is wanted for its own sake.
+
+~~Fix: per the issue's own preferred direction, poll on ceremony completion rather than a hardcoded frame count, so the two verify paths can never drift again:~~
 
 ```gdscript
 var frames := 0
@@ -52,7 +56,7 @@ while not (_replay_scene_continue_visible() or frames >= 400):
     frames += 1
 ```
 
-where `_replay_scene_continue_visible()` checks the instantiated `RoundEndScene`'s `_continue_button.visible or _new_run_button.visible` (both flip `true` only after `_run_ceremony()` finishes, per `RoundEndScene.gd:_ready()`). Since the harness holds a reference to the instanced scene already (however it's structured for the live path), expose whichever button is relevant through the scene's existing `%` unique names rather than adding a new public API to `RoundEndScene` - this is test-harness code reaching into the scene tree it just instantiated, not a new contract `RoundEndScene` needs to support. The `frames >= 400` cap (~6.7s) is a safety timeout so a genuine regression (ceremony never completes) fails fast instead of hanging CI forever, rather than looping unbounded.
+~~where `_replay_scene_continue_visible()` checks the instantiated `RoundEndScene`'s `_continue_button.visible or _new_run_button.visible` (both flip `true` only after `_run_ceremony()` finishes, per `RoundEndScene.gd:_ready()`).~~ (Struck through - see correction above. Do not implement this.)
 
 **Verification**: run both `SYNGRID_LIVE=1` and offline `SYNGRID_RESULT=win` against the same scenario and confirm both screenshots show the orbs fully popped in, not just the offline one.
 
