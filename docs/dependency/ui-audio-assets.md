@@ -80,3 +80,7 @@ All four are legitimate, reasonably priced packs, but none survive a fit check a
 - Combat SFX (7 keys) and final BGM pick need an actual listen-through, which is a Cursor/human task, not
   something this doc can settle from text descriptions alone. Issue #8 is updated with this as an explicit
   remaining task rather than a resolved decision.
+- Five new SFX keys added by issue #30 (`coin_earn`, `coin_spend`, `triumph_earn`, `defeat_stinger`,
+  `victory_fanfare`) ship as procedural placeholders via `tools/generate_placeholder_audio.py`, same as the
+  original 14 events. Real-asset sourcing for these follows the same deferred, non-blocking path as the
+  combat-SFX/BGM picks above - no separate tracking entry; audition and replace alongside the rest.

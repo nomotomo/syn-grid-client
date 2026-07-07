@@ -157,6 +157,7 @@ func _animate_hearts() -> void:
 		_heart_holders.append(holder)
 	if _is_eliminated:
 		AudioManager.play_fatal_hp_loss()
+		AudioManager.play_defeat_stinger()
 		for i in _heart_holders.size():
 			await get_tree().create_timer(heart_stagger).timeout
 			_shatter_heart(_heart_holders[i])
@@ -185,7 +186,7 @@ func _animate_orbs() -> void:
 		_orbs_row.add_child(holder)
 		_orb_holders.append(holder)
 	if _is_victory:
-		AudioManager.play_triumph_milestone()
+		AudioManager.play_victory_fanfare()
 		for i in _orb_holders.size():
 			await get_tree().create_timer(orb_stagger).timeout
 			_pop_holder(_orb_holders[i], 0.0)
@@ -193,6 +194,7 @@ func _animate_orbs() -> void:
 	for i in triumph:
 		var is_newest := _won and i == triumph - 1
 		if is_newest:
+			AudioManager.play_triumph_earn()
 			_pop_holder(_orb_holders[i], 0.0, true)
 			_spawn_burst(_orb_holders[i].global_position + Vector2(orb_size, orb_size) * 0.5,
 				SynGridPalette.ACCENT_TEAL)

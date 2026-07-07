@@ -260,6 +260,49 @@ def sfx_triumph_milestone() -> np.ndarray:
     return out
 
 
+def sfx_coin_earn() -> np.ndarray:
+    """Bright single coin-clink, very short."""
+    out = np.zeros(samples(0.25))
+    tone = (osc(1800.0, 0.12) + 0.4 * osc(3200.0, 0.12)) * decay_env(0.12, k=8, attack=0.002)
+    place(out, tone, 0.0, gain=0.6)
+    return out
+
+
+def sfx_coin_spend() -> np.ndarray:
+    """Duller, lower-pitched coin drop - the inverse of coin_earn."""
+    out = np.zeros(samples(0.3))
+    tone = (osc(600.0, 0.18) + 0.3 * osc(900.0, 0.18)) * decay_env(0.18, k=6, attack=0.004)
+    place(out, tone, 0.0, gain=0.55)
+    return out
+
+
+def sfx_triumph_earn() -> np.ndarray:
+    """Soft single tick/ping, subordinate to triumph_milestone."""
+    out = np.zeros(samples(0.3))
+    tone = osc(1046.5, 0.15) * decay_env(0.15, k=7, attack=0.003)
+    place(out, tone, 0.0, gain=0.4)
+    return out
+
+
+def sfx_defeat_stinger() -> np.ndarray:
+    """Short low-register stinger - layered with fatal_hp_loss, not a replacement."""
+    out = np.zeros(samples(0.6))
+    for f in [196.0, 146.83]:
+        tone = osc(f, 0.4, "saw") * decay_env(0.4, k=3, attack=0.01)
+        place(out, lowpass(tone, 1200), 0.0, gain=0.5)
+    return out
+
+
+def sfx_victory_fanfare() -> np.ndarray:
+    """Bigger, longer fanfare than triumph_milestone."""
+    out = np.zeros(samples(1.8))
+    notes = [(392.0, 0.0, 0.3), (523.25, 0.22, 0.3), (659.25, 0.44, 0.3), (783.99, 0.66, 1.0)]
+    for f, at, d in notes:
+        tone = (osc(f, d) + 0.5 * osc(f * 2, d) + 0.3 * osc(f * 1.5, d))
+        place(out, tone * decay_env(d, k=3.5, attack=0.006), at, gain=0.75)
+    return out
+
+
 SFX_BUILDERS = {
     "sfx_shop_reroll": sfx_shop_reroll,
     "sfx_synergy_link": sfx_synergy_link,
@@ -275,6 +318,11 @@ SFX_BUILDERS = {
     "sfx_triple_merge": sfx_triple_merge,
     "sfx_win_round": sfx_win_round,
     "sfx_triumph_milestone": sfx_triumph_milestone,
+    "sfx_coin_earn": sfx_coin_earn,
+    "sfx_coin_spend": sfx_coin_spend,
+    "sfx_triumph_earn": sfx_triumph_earn,
+    "sfx_defeat_stinger": sfx_defeat_stinger,
+    "sfx_victory_fanfare": sfx_victory_fanfare,
 }
 
 

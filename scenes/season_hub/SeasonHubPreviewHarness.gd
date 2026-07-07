@@ -25,4 +25,5 @@ func _ready() -> void:
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(screenshot_path)
 	print("auto-verify: screenshot saved to ", screenshot_path)
+	await AudioManager.release_bgm_before_quit()
 	get_tree().quit()

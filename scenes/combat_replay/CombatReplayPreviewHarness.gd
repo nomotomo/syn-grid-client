@@ -199,4 +199,5 @@ func _save_and_quit(screenshot_path: String) -> void:
 			print("auto-verify: no image buffer (headless) - skipping screenshot")
 	else:
 		print("auto-verify: no viewport texture (headless) - skipping screenshot")
+	await AudioManager.release_bgm_before_quit()
 	get_tree().quit()
