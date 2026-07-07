@@ -50,7 +50,7 @@ void fragment() {
 
 	float h = hash21(cell);
 	int variant = int(floor(h * 4.0));
-	float presence = step(0.55, h);
+	float presence = step(0.55, hash21(cell + vec2(17.0, 31.0)));
 
 	float g = rune_glyph(cell_uv, variant) * presence;
 	vec3 color = mix(base_color, rune_color, g * rune_alpha);
