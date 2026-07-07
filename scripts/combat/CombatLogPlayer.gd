@@ -11,11 +11,13 @@ signal playback_finished(winner_id: String, attacker_hp: float, defender_hp: flo
 # Contract section 4: 10 events/s normally, 5 events/s during crits so the
 # hit-stop registers. The gap after a crit event is tick_interval * this.
 @export var crit_tick_multiplier: float = 2.0
+@export var slow_event_interval: float = 0.25
 
 var _queue: Array[Dictionary] = []
 var _combat_log: Dictionary = {}
 var _timer: Timer
 var _paused: bool = false
+var _slow_next_pending: bool = false
 
 func _ready() -> void:
 	_timer = Timer.new()
@@ -35,6 +37,12 @@ func load_log(combat_log: Dictionary) -> void:
 func stop() -> void:
 	_timer.stop()
 	_queue.clear()
+
+func remaining_count() -> int:
+	return _queue.size()
+
+func slow_next_event() -> void:
+	_slow_next_pending = true
 
 func _dequeue_next() -> void:
 	if _queue.is_empty():
@@ -57,3 +65,6 @@ func _dequeue_next() -> void:
 	elif not is_equal_approx(_timer.wait_time, tick_interval):
 		# Restore the normal cadence after a crit-stretched gap.
 		_timer.start(tick_interval)
+	if _slow_next_pending:
+		_timer.start(slow_event_interval)
+		_slow_next_pending = false

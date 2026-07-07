@@ -82,6 +82,18 @@ func _fabricate_log() -> Dictionary:
 				"crit": crit, "actual_damage": dmg, "shield_absorbed": absorbed,
 				"hp_loss": loss, "target_hp_after": opp_hp,
 				"target_shield_after": opp_shield})
+	# Last player strike must actually end the match so offline harness exercises
+	# shatter + killing-blow juice (simulated opp_hp was not reaching zero).
+	for j in range(events.size() - 1, -1, -1):
+		var e: Dictionary = events[j]
+		if String(e.get("target_player_id", "")) != "bot-swordsman":
+			continue
+		var pre_hit_hp := float(e.get("target_hp_after", 0.0)) + float(e.get("hp_loss", 0.0))
+		e["hp_loss"] = pre_hit_hp
+		e["actual_damage"] = pre_hit_hp + float(e.get("shield_absorbed", 0.0))
+		e["target_hp_after"] = 0.0
+		opp_hp = 0.0
+		break
 	return {
 		"attacker_id": "preview-player",
 		"defender_id": "bot-swordsman",
@@ -89,7 +101,7 @@ func _fabricate_log() -> Dictionary:
 		"total_ticks": 90,
 		"events": events,
 		"attacker_hp_final": my_hp,
-		"defender_hp_final": 0.0,
+		"defender_hp_final": opp_hp,
 	}
 
 func _instance_replay() -> void:

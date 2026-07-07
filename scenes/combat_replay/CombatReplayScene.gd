@@ -29,6 +29,8 @@ const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 @export var float_fade_start: float = 0.3
 @export var crit_float_scale: float = 1.8
 @export var result_delay: float = 0.4
+@export var hit_shake_amplitude: float = 3.0
+@export var hit_shake_duration: float = 0.05
 
 @onready var _background: ColorRect = %Background
 @onready var _shake_camera: Camera2D = %ShakeCamera
@@ -232,6 +234,8 @@ func _display_shield_total(items: Array) -> float:
 # -- Event interpretation (contract section 4) --
 
 func _on_event_played(ev: Dictionary) -> void:
+        if _log_player.remaining_count() == 1:
+                _log_player.slow_next_event()
         _tick_label.text = "TICK %d / %d" % [int(ev.get("tick", 0)),
                 int(GameState.last_combat_log.get("total_ticks", 0))]
         _update_round_timer_progress(int(ev.get("tick", 0)),
@@ -242,6 +246,7 @@ func _on_event_played(ev: Dictionary) -> void:
         var hp_loss := float(ev.get("hp_loss", 0.0))
         var shield_absorbed := float(ev.get("shield_absorbed", 0.0))
         var target_hp_after := float(ev.get("target_hp_after", 0.0))
+        var is_match_ending := hp_loss > 0.0 and target_hp_after <= 0.0
 
         _play_lunge(firing_id)
         _play_fire_sfx(firing_id, crit)
@@ -261,6 +266,9 @@ func _on_event_played(ev: Dictionary) -> void:
                         float(ev.get("target_shield_after", 0.0)))
 
         var impact_pos := _impact_position(ev, target_bar)
+        var target_card: ItemCard = _cards_by_item_id.get(String(ev.get("target_item_id", "")))
+        if not is_match_ending:
+                _play_hit_reaction(target_card)
         if firing_card != null:
                 _spawn_muzzle_flash(firing_card.get_global_rect().get_center(), category)
                 _spawn_projectile(firing_card.get_global_rect().get_center(),
@@ -274,7 +282,7 @@ func _on_event_played(ev: Dictionary) -> void:
                 _hit_count += 1
         if crit:
                 _crit_count += 1
-        if hp_loss > 0.0 and target_hp_after <= 0.0:
+        if is_match_ending:
                 _ko_count += 1
         _refresh_hit_counter()
 
@@ -289,8 +297,30 @@ func _on_event_played(ev: Dictionary) -> void:
 
         # Killing-blow accent: on the shot that ends a life bar, paint a soft
         # DANGER wash over the whole viewport that fades out over 0.35s.
-        if hp_loss > 0.0 and target_hp_after <= 0.0:
+        if is_match_ending:
+                if target_card != null:
+                        target_card.play_shatter()
+                        var dying_item: Dictionary = _items_by_id.get(String(ev.get("target_item_id", "")), {})
+                        var shatter_color := _projectile_color(String(dying_item.get("weapon_category", "")))
+                        _spawn_damage_sparks(target_card.get_global_rect().get_center(), shatter_color, 5)
                 _play_killing_blow_effect()
+
+func _play_hit_reaction(target_card: ItemCard) -> void:
+        if target_card == null:
+                return
+        var rest_x := target_card.position.x
+        var shake := create_tween()
+        shake.tween_property(target_card, "position:x", rest_x - hit_shake_amplitude, hit_shake_duration) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+        shake.tween_property(target_card, "position:x", rest_x + hit_shake_amplitude, hit_shake_duration) \
+                .set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+        shake.tween_property(target_card, "position:x", rest_x, hit_shake_duration) \
+                .set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+        var flash := create_tween()
+        flash.tween_property(target_card, "modulate", Color(1.6, 1.6, 1.6, 1.0), hit_shake_duration * 0.4) \
+                .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+        flash.tween_property(target_card, "modulate", Color.WHITE, hit_shake_duration * 1.2) \
+                .set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 func _play_lunge(firing_id: String) -> void:
         var card: ItemCard = _cards_by_item_id.get(firing_id)
