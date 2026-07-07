@@ -32,6 +32,10 @@ const SFX_PATHS: Dictionary = {
 const BGM_PREP:   String = "res://assets/audio/bgm/bgm_prep.wav"
 const BGM_COMBAT: String = "res://assets/audio/bgm/bgm_combat.wav"
 
+# Every dynamically-created one-shot SFX player joins this group so they can be
+# force-stopped and freed on shutdown, not just via finished -> queue_free.
+const SFX_PLAYER_GROUP: StringName = &"syngrid_sfx_players"
+
 var _bgm_a: AudioStreamPlayer
 var _bgm_b: AudioStreamPlayer
 var _active_bgm: AudioStreamPlayer
@@ -65,25 +69,54 @@ func _ready() -> void:
 	_bgm_a.tree_exiting.connect(release_bgm_streams)
 	_bgm_b.tree_exiting.connect(release_bgm_streams)
 
-# Stops BGM playback and drops both stream references. Connected to each player's
-# tree_exiting so refs are released on teardown; also callable directly by the
-# dev preview harnesses right before get_tree().quit() (followed by one processed
-# frame) so the AudioServer flushes the stopped playback and the AudioStreamWAV
-# is not reported as a leaked instance at process exit (issue #15).
+# Stops all playback (both BGM players and every live one-shot SFX player) and
+# drops their stream references. Connected to each BGM player's tree_exiting so
+# refs are released on teardown; also callable directly by the dev preview
+# harnesses right before get_tree().quit() so nothing is reported as a leaked
+# AudioStreamWAV at process exit (issue #15). SFX players normally self-free via
+# finished -> queue_free, but a quit or scene unload before a sound finishes
+# would otherwise leak them, so they are force-stopped here too.
 func release_bgm_streams() -> void:
 	_kill_bgm_tween()
 	for player in [_bgm_a, _bgm_b]:
 		if is_instance_valid(player):
 			player.stop()
 			player.stream = null
+	var tree := get_tree()
+	if tree == null:
+		return
+	for node in tree.get_nodes_in_group(SFX_PLAYER_GROUP):
+		if is_instance_valid(node):
+			node.stop()
+			node.stream = null
+			node.queue_free()
 
-# Call from dev preview harnesses immediately before get_tree().quit(). Stops BGM,
-# then yields three frames so the AudioServer flushes the stopped playback before
-# the process-exit leak check (issue #15; one frame is not enough under --verbose).
+# Call from dev preview harnesses immediately before get_tree().quit(). Stops all
+# audio, frees the BGM player nodes, then yields a short wall-clock interval.
+# Stopping and nulling the stream alone does not reliably release the *active*
+# playback before the process-exit leak check (the AudioServer thread still holds
+# it); freeing the player node plus giving the mixer real time to flush releases
+# it deterministically, regardless of audio-thread timing (issue #15 - reproduced
+# on a full prep->combat->prep sequence).
 func release_bgm_before_quit() -> void:
 	release_bgm_streams()
-	for _i in 3:
-		await get_tree().process_frame
+	for player in [_bgm_a, _bgm_b]:
+		if is_instance_valid(player):
+			# Disconnect the teardown handler first so freeing the player does not
+			# re-enter release_bgm_streams mid-destruction.
+			if player.tree_exiting.is_connected(release_bgm_streams):
+				player.tree_exiting.disconnect(release_bgm_streams)
+			player.free()
+	_bgm_a = null
+	_bgm_b = null
+	_active_bgm = null
+	# Yield real wall-clock time, not just process frames: under --headless the
+	# main loop iterates near-instantly, so counting frames gives the AudioServer
+	# mixer thread no time to release the freed players' playback before the
+	# process-exit leak check. A short timer lets the mixer flush deterministically.
+	var tree := get_tree()
+	if tree != null:
+		await tree.create_timer(0.3).timeout
 
 func play_prep_bgm() -> void:
 	_crossfade_bgm(BGM_PREP)
@@ -172,13 +205,19 @@ func _crossfade_bgm(path: String) -> void:
 	if stream == null:
 		return
 	_current_bgm_path = path
+	# Cancel any in-flight fade first. Killing the tween also cancels its chained
+	# `outgoing.stop` callback, so the player it was about to stop may still be
+	# looping - that player is exactly the one we are about to reuse below, so we
+	# stop it explicitly before restarting it. Without this, a superseded
+	# crossfade leaves a track looping forever at -80dB (issue #15 root cause).
+	_kill_bgm_tween()
 	var inactive := _bgm_b if _active_bgm == _bgm_a else _bgm_a
 	var outgoing := _active_bgm
+	inactive.stop()
 	_active_bgm = inactive
 	inactive.stream = stream
 	inactive.volume_db = -80.0
 	inactive.play()
-	_kill_bgm_tween()
 	_bgm_tween = create_tween().set_parallel(true)
 	_bgm_tween.tween_property(outgoing, "volume_db", -80.0, bgm_fade_duration)
 	_bgm_tween.tween_property(inactive, "volume_db", 0.0, bgm_fade_duration)
@@ -216,6 +255,7 @@ func _play_sfx(key: String, pitch: float = 1.0) -> void:
 	player.stream = stream
 	player.pitch_scale = pitch
 	add_child(player)
+	player.add_to_group(SFX_PLAYER_GROUP)
 	player.play()
 	player.finished.connect(player.queue_free)
 
@@ -230,6 +270,7 @@ func _play_sfx_2d(key: String, pos: Vector2, pitch: float = 1.0) -> void:
 	player.global_position = pos
 	player.pitch_scale = pitch
 	add_child(player)
+	player.add_to_group(SFX_PLAYER_GROUP)
 	player.play()
 	player.finished.connect(player.queue_free)
 
