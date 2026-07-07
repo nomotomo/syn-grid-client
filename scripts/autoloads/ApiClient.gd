@@ -52,6 +52,11 @@ signal get_active_grid_failed(code: int, reason: String)
 signal reset_run_completed(data: Dictionary)
 signal reset_run_failed(code: int, reason: String)
 
+signal _validate_grid_raw_completed(data: Dictionary)
+
+func _ready() -> void:
+	_validate_grid_raw_completed.connect(_on_validate_grid_raw_completed)
+
 # -- Public API --
 # Callers invoke these methods. They never await return values.
 # Connect to the corresponding signals to handle responses.
@@ -76,7 +81,18 @@ func sell_item(item_id: String) -> void:
 
 func validate_grid(grid: Dictionary) -> void:
 	_request(HTTPClient.METHOD_POST, "/v1/grid/validate", {"grid": grid}, {}, true,
-		validate_grid_completed, validate_grid_failed)
+		_validate_grid_raw_completed, validate_grid_failed)
+
+func _on_validate_grid_raw_completed(data: Dictionary) -> void:
+	validate_grid_completed.emit(normalize_validate_grid_response(data))
+
+# api_contract.md: synergies[].modifier_pct is whole percent points server-side
+# (15.0 == +15%); every downstream consumer assumes a 0-1 fraction.
+func normalize_validate_grid_response(data: Dictionary) -> Dictionary:
+	for synergy: Dictionary in data.get("synergies", []):
+		if synergy.has("modifier_pct"):
+			synergy["modifier_pct"] = float(synergy["modifier_pct"]) / 100.0
+	return data
 
 func start_match(grid: Dictionary) -> void:
 	_request(HTTPClient.METHOD_POST, "/v1/match/start", {"grid": grid}, {}, true,

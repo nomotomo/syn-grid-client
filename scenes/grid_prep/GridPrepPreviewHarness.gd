@@ -81,10 +81,10 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	_auto_place_item("preview-2", Vector2i(3, 1))
 	# No Go server in this harness, so exercise the synergy glow shader +
 	# chime path by injecting a validate_grid response shaped like the real one.
-	_grid._on_validate_grid_completed({"synergies": [
+	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",
-			"direction": "EAST", "modifier_pct": 0.25},
-	]})
+			"direction": "EAST", "modifier_pct": 15.0},
+	]}))
 	for _i in 50:
 		await get_tree().process_frame
 	var grid_bottom: float = _grid._grid_area.position.y + _grid._grid_area.size.y
@@ -119,25 +119,42 @@ func _run_live_verify(screenshot_path: String) -> void:
 	for _i in 90:
 		await get_tree().process_frame
 
-	# Buy the cheapest affordable slot for real.
-	var cheapest: Dictionary = {}
-	for card: ItemCard in _grid.get_node("%ShopRow").get_children():
-		var slot: Dictionary = card.get("_item_data")
-		var price := int(slot.get("buy_price", 999999))
-		if price <= GameState.gold and (cheapest.is_empty() or price < int(cheapest.get("buy_price", 999999))):
-			cheapest = slot
-	if cheapest.is_empty():
-		printerr("live-verify: no affordable slot")
-	else:
-		_grid._on_shop_card_pressed(cheapest)
-	for _i in 90:
-		await get_tree().process_frame
+	# Buy Iron Sword + Leather Armor when available so live synergy receptors match issue #43.
+	var target_templates: Array[String] = ["Iron Sword", "Leather Armor"]
+	for template_name in target_templates:
+		var found := false
+		for card: ItemCard in _grid.get_node("%ShopRow").get_children():
+			var slot: Dictionary = card.get("_item_data")
+			if String(slot.get("template_name", "")) != template_name:
+				continue
+			if int(slot.get("buy_price", 999999)) > GameState.gold:
+				break
+			_grid._on_shop_card_pressed(slot)
+			found = true
+			break
+		if not found:
+			break
+		for _i in 45:
+			await get_tree().process_frame
 
-	# Place the purchased item on the grid; the real validate_grid response
-	# drives any synergy glow.
-	if _grid.get_node("%BenchRow").get_child_count() > 0:
-		_auto_place(0, Vector2i(1, 1))
-	for _i in 60:
+	# Place purchased items adjacent; the real validate_grid response drives synergy glow.
+	var validate_state := {"done": false}
+	ApiClient.validate_grid_completed.connect(func(data: Dictionary) -> void:
+		if not data.get("synergies", []).is_empty():
+			validate_state["done"] = true
+	)
+	if _bench_card_for_name("Iron Sword") != null:
+		_auto_place_item_by_card(_bench_card_for_name("Iron Sword"), Vector2i(1, 1))
+		for _i in 45:
+			await get_tree().process_frame
+	if _bench_card_for_name("Leather Armor") != null:
+		_auto_place_item_by_card(_bench_card_for_name("Leather Armor"), Vector2i(2, 1))
+
+	for _i in 180:
+		if validate_state["done"]:
+			break
+		await get_tree().process_frame
+	for _i in 50:
 		await get_tree().process_frame
 
 	print("live-verify: gold=%d bench=%d equipped=%d slots=%d status=%s" % [
@@ -147,6 +164,18 @@ func _run_live_verify(screenshot_path: String) -> void:
 		_grid.get_node("%ShopRow").get_child_count(),
 		_grid.get_node("%StatusLabel").text])
 	_save_and_quit(screenshot_path)
+
+func _bench_card_for_name(item_name: String) -> ItemCard:
+	for child in _grid.get_node("%BenchRow").get_children():
+		var candidate := child as ItemCard
+		if candidate != null and String(candidate.get("_item_data").get("name", "")) == item_name:
+			return candidate
+	return null
+
+func _auto_place_item_by_card(card: ItemCard, cell_coords: Vector2i) -> void:
+	var cell: GridCell = _grid._cell_at(cell_coords.x, cell_coords.y)
+	_grid._on_card_drag_started(card)
+	_grid._on_card_drag_ended(card, cell.get_global_rect().get_center())
 
 func _auto_place_item(item_id: String, cell_coords: Vector2i) -> void:
 	var bench_row: HBoxContainer = _grid.get_node("%BenchRow")
