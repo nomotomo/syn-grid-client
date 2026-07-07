@@ -330,3 +330,31 @@ Batching (issue = the batch, doc sections = the spec):
 
 §1.5 (debug scrubber) folds into the Battle Report issue as the timeline scrubber MVP.
 Refinement: §2.2 best-slot hint and game_ideas.md §5.5 inaction tooltips are one placement-suggestion engine - specced once inside the onboarding & hints issue.
+
+---
+
+## 13. Playtest pass additions (Jul 2026)
+
+_Added by Claude Code (Lead Architect) after a full live-server playthrough and a screenshot review of every scene._
+_Only genuinely new polish items are listed; bugs found in the same pass were filed as issues, and gameplay-scale ideas went to game_ideas.md §11._
+
+### 13.1 Low-life danger framing  •  S
+Nothing in the HUD escalates when the run is nearly over.
+When LIFE is 2 or less, give the LIFE pill a slow heartbeat scale pulse and a faint crimson vignette breathing at the viewport edges during grid prep.
+The player should feel the stakes of the round before it starts, not discover them at the round-end screen.
+_Files_: `scenes/grid_prep/GridPrepScene.gd`, `scripts/autoloads/ScreenEffects.gd`.
+
+### 13.2 Replace the raw device UUID on the identity card  •  XS
+The main menu identity card shows the full device UUID under the callsign, which is meaningless noise to a player.
+Replace it with a stat line (lifetime wins, best triumph) or the player's equipped title once titles exist (game_ideas.md §6.8).
+_Files_: `scenes/main_menu/MainMenu.gd`.
+
+### 13.3 Promote the synergy status from footer text to a HUD chip  •  S
+"1 synergy link(s) active" renders as tiny footer text under START MATCH, but synergy count is the single best summary of board quality.
+Move it to a glowing chip beside START MATCH that pulses when the count changes, and have it read "SYNERGIES: 2  (+27% DMG)" using the summed modifier.
+Complements the drag-time preview in #32 rather than duplicating it: this is the resting-state surface.
+_Files_: `scenes/grid_prep/GridPrepScene.tscn` + `.gd`.
+
+### 13.4 Run-terminal ceremony  •  pointer
+The victory (GRID DOMINATED) and elimination (RUN TERMINATED) screens are currently a text swap on the ordinary round-end layout - the biggest emotional beats in the game are the flattest screens in it.
+Specced as the run epilogue in game_ideas.md §11.6; when that lands, the round-end ceremony work in #35 should treat run-terminal states as a separate, bigger tier.

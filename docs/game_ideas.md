@@ -548,4 +548,97 @@ Every issue carries a `P0`-`P3` label and an explicit order; the two epics hold 
 
 ---
 
+## 11. Playtest pass (Jul 2026) - findings from an actual end-to-end run
+
+_Added by Claude Code (Lead Architect) after playing a full 6-round run against the live server (auth, shop, placement, synergy validation, combat, finalize) and inspecting every scene via the screenshot harnesses._
+_These ideas are deduped against sections 1-10 above, improvements.md, and the issue backlog (client epic #42, server epics #26/#57)._
+_The theme of this pass: the loop works, but nothing yet pulls a player into a multi-hour session - these are the hooks that do._
+
+### What the playtest actually felt like (context for the ideas)
+
+A full round takes 2-3 minutes and the combat replay portion of it lasts 1-5 seconds (real fights were 8-26 ticks, 12-51 events, at the fixed 0.10s cadence).
+Three of six matches were against empty or 2-item ghost boards, so tension collapsed to zero (bug filed separately).
+The best moment of the run was an unscripted 16-HP clutch win in round 6 - the game produced drama and then did not acknowledge it.
+Winning the entire run shows the same screen as an ordinary round with different text.
+Nothing on the main menu changes day to day, so there is no reason to come back tomorrow except the season timer.
+
+### 11.1 Ghost Dispatches - the "while you were away" report  •  M · server-tiny  •  the single highest-leverage idea in this pass
+
+Syn-Grid is an asynchronous ghost battler, but the player only ever experiences half of that: their board fights other players constantly and they never hear about it.
+On login, show a dispatch panel: "While you were away your grid defended 7 raids - won 5, fell to NightOwl and 1 other."
+Defense wins bank a small gold bonus (capped per day) so checking in feels like collecting yield from a machine you built.
+This is the strongest possible push-notification hook ("Your grid just repelled a raid") and it is pure serialization - the matches already happen, the server just needs to record and report them.
+Pairs naturally with nemesis ghosts (#54): the player who broke your defense becomes your suggested revenge target.
+
+### 11.2 Overclock - endless mode after victory  •  M · server-tiny
+
+"GRID DOMINATED" at 10 triumph currently ends the run with a text banner.
+Instead, offer one button: "OVERCLOCK THE GRID" - keep the board, keep fighting, opponents scale +10% per round, no more life loss protection, run ends on first defeat.
+Deepest-overclock becomes its own leaderboard column and the bragging stat for strong players.
+This converts the game's terminal state into its longest session driver, which is exactly the "tuck in for hours" request.
+
+### 11.3 Scouting report in grid prep  •  M · server-tiny
+
+Prep is currently blind: you build a board with no information about what you will face, so placement is habit rather than decision.
+Add a compact intel strip above START MATCH: opponent category composition chips ("MELEE x3, ARCANE x1"), their board's total attack/armor split, and a threat line naming their strongest item.
+The async ghost pool makes this fair - the data is a snapshot the server already holds.
+The fog-of-war modifier (section 2.1) later becomes meaningful precisely because scouting is the norm it takes away.
+
+### 11.4 Shop lock  •  S · server-tiny
+
+The genre-staple freeze mechanic is missing: there is no way to hold a shop offer for next round.
+Long-press a shop card to lock it; the next round's deterministic roll preserves that slot and rolls the rest.
+One boolean per slot server-side, one padlock glyph client-side, and suddenly shop decisions have a second axis (buy now vs lock for after the merge).
+
+### 11.5 Hot-streak wager  •  S · server-tiny
+
+After 2 consecutive wins, offer an optional wager before the next match: stake 1 triumph to earn 2 on a win.
+Declining costs nothing; accepting turns a routine mid-run round into the most tense fight of the session.
+Push-your-luck is the cheapest known way to make players narrate their own matches ("I wagered and it came down to 16 HP").
+
+### 11.6 Run epilogue and shareable run card  •  M · client + server-tiny
+
+Both run-terminal screens (victory and elimination) deserve a ceremony that the per-match Battle Report (#31) does not cover: the story of the whole run.
+One screen: rounds survived, MVP item with its total damage, the clutchest moment (smallest winning HP margin), gold earned, and a rendered "run card" image saved for sharing.
+Elimination especially needs this - a death screen that celebrates how far you got converts frustration into "one more run".
+Server side only needs per-run aggregates, which the match history table already implies.
+
+### 11.7 Clearance levels - per-run difficulty ladder  •  M · server-tiny
+
+After a first victory, NEW RUN offers Clearance 2: opponents +10% stats, exclusive border cosmetic on the run card.
+Each victory unlocks the next clearance, displayed next to the callsign on the leaderboard.
+This is the ascension pattern that gives roguelike auto-battlers their 100-hour tails, and it reuses the existing run loop unchanged.
+Distinct from prestige (section 6.15), which is season-scoped; clearance is run-scoped and always available.
+
+### 11.8 Daily placement puzzle  •  M · server-tiny
+
+A single fixed board, fixed bench, fixed opponent, one attempt per day: find the placement that wins.
+Global solve percentage shown after your attempt ("you solved it - 34% of players did").
+Complements the Weekly Gauntlet (#52) at a 2-minute scale and gives the main menu its daily-return hook alongside timed events (#56).
+
+### 11.9 Combat pacing curve - amendment to the 0.10s law  •  M · client-only  •  juice-contract change
+
+Playtest data: at one event per 0.10s, real fights resolve in 1-5 seconds - the climax of the loop is over before it lands.
+Proposed amendment to juice_manual.md section 4, to be specced properly before implementation:
+a 1-second VS intro card (both boards, callsigns, category chips) before the first event;
+event cadence opens at 0.15s, accelerates to 0.07s through the middle, and re-expands for the final 10% of events;
+a CLUTCH banner when the winner finishes under 10% HP, feeding the announcer stub hooks (#41).
+The one-event-per-tick queue discipline stays; only the interval becomes a curve.
+
+### 11.10 Bots as named raiders  •  S · client + server-tiny
+
+When matchmaking falls back to a bot ghost (bot-lancer, bot-pikeman), present it as a character: portrait, title, one-line taunt on the VS card.
+First defeat of each raider unlocks its codex entry (feeds the Codex screen, #34).
+This makes the current weakest matches (fixed 2-item bot boards) feel authored instead of hollow, and it is presentation-only until G7's real PvE bosses land.
+
+### Suggested slotting
+
+11.1 (dispatches) and 11.2 (overclock) are the two I would promote into the next wave alongside the P1s - they attack retention and session length directly.
+11.4 (shop lock) and 11.5 (wager) belong in the economy-depth issue (#53) as siblings of interest and pity.
+11.3 (scouting) should ride with nemesis ghosts (#54).
+11.9 (pacing curve) belongs in the combat feel batch (#28) since it touches the same replay code.
+11.6, 11.7, 11.8, 11.10 are new issues to slot at P2/P3 in the epics.
+
+---
+
 _End of design brainstorm. Pick anything, push back on anything, add anything._

@@ -161,11 +161,15 @@ Response:
       "source_item_id": "uuid-a",
       "target_item_id": "uuid-b",
       "direction": "EAST",
-      "modifier_pct": 0.20
+      "modifier_pct": 15.0
     }
   ]
 }
 ```
+
+`modifier_pct` is expressed in whole percent points, not a fraction: `15.0` means +15% damage.
+The server divides by 100 when applying it (`internal/combat/combat.go`), and template receptors carry values like 12, 15, 20.
+Client code must divide by 100 before using it as a shader intensity or pitch offset.
 
 Returns `400 INVALID_ARGUMENT` if the grid fails validation.
 Call this after every item placement/removal to get live synergy feedback.
@@ -492,6 +496,6 @@ Item {
 SynergyReceptor {
   direction:    "NORTH" | "SOUTH" | "EAST" | "WEST"
   accepts_type: "WEAPON" | "ARMOR" | "POTION" | "AUXILIARY"
-  modifier_pct: float
+  modifier_pct: float   (whole percent points: 15 means +15%)
 }
 ```
