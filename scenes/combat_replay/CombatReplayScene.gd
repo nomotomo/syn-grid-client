@@ -64,6 +64,15 @@ var _cards_by_item_id: Dictionary = {}   # item_id -> ItemCard
 var _items_by_id: Dictionary = {}        # item_id -> item Dictionary
 var _side_by_item_id: Dictionary = {}    # item_id -> "player" | "opponent"
 var _bars_by_player_id: Dictionary = {}  # player_id -> HpBar
+var _cumulative_damage_by_item_id: Dictionary = {}  # item_id -> float
+var _meters_by_item_id: Dictionary = {}  # item_id -> DamageMeter
+var _synergy_announced_item_ids: Dictionary = {}  # item_id -> true
+var _synergy_stack: VBoxContainer = null
+var _threat_pill: PanelContainer = null
+var _threat_label: Label = null
+var _threat_last_rendered: Array = []
+var _log_ticker: VBoxContainer = null
+const _LOG_TICKER_MAX_LINES: int = 4
 var _result_shown: bool = false
 var _round_played: int = 0
 var _fight_won: bool = false
@@ -101,6 +110,30 @@ func _ready() -> void:
         _hit_counter_footer.offset_bottom = -14.0
         add_child(_hit_counter_footer)
         _refresh_hit_counter()
+
+        _synergy_stack = VBoxContainer.new()
+        _synergy_stack.add_theme_constant_override("separation", 6)
+        _synergy_stack.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+        _synergy_stack.position = Vector2(size.x - 180.0, 140.0)
+        _synergy_stack.size = Vector2(170.0, 300.0)
+        _synergy_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(_synergy_stack)
+
+        _threat_pill = PanelContainer.new()
+        _threat_pill.add_theme_stylebox_override("panel",
+                ThemeBuilder.build_panel_style(SynGridPalette.DANGER, SynGridPalette.PANEL_BG_ELEVATED))
+        _threat_label = Label.new()
+        _threat_label.add_theme_font_size_override("font_size", 13)
+        _threat_label.add_theme_color_override("font_color", SynGridPalette.TEXT_PRIMARY)
+        _threat_pill.add_child(_threat_label)
+        _threat_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(_threat_pill)
+
+        _log_ticker = VBoxContainer.new()
+        _log_ticker.add_theme_constant_override("separation", 2)
+        _log_ticker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(_log_ticker)
+        _layout_telemetry_overlays()
 
         # ScreenEffects shakes by offsetting the current camera; centred at the
         # viewport midpoint the camera reproduces the identity view.
@@ -168,6 +201,8 @@ func _layout_screen() -> void:
         _vs_label.position = Vector2(0.0, size.y * 0.465)
         _vs_label.size = Vector2(size.x, 60.0)
 
+        _layout_telemetry_overlays()
+
         _player_grid_area.position = Vector2(center_x, size.y * 0.52)
         _player_grid_area.size = grid_total
         _player_bar.position = Vector2(40.0, _player_grid_area.position.y + grid_total.y + 28.0)
@@ -189,6 +224,18 @@ func _layout_screen() -> void:
                 var expand := grid_total.x * 0.18
                 floor_rect.position = Vector2(-expand, -expand)
                 floor_rect.size = grid_total + Vector2(expand * 2.0, expand * 2.0)
+
+func _layout_telemetry_overlays() -> void:
+        var grid_total := _cell_outer_size() * Vector2(grid_columns, grid_rows)
+        var center_x := (size.x - grid_total.x) / 2.0
+        if _threat_pill != null:
+                _threat_pill.position = Vector2(center_x, 170.0)
+                _threat_pill.size = Vector2(grid_total.x, 24.0)
+        if _log_ticker != null:
+                _log_ticker.position = Vector2(40.0, size.y * 0.465)
+                _log_ticker.size = Vector2(size.x - 80.0, 60.0)
+        if _synergy_stack != null:
+                _synergy_stack.position = Vector2(size.x - 180.0, 140.0)
 
 func _build_side(side: String, items: Array, container: GridContainer, mirror_x: bool) -> void:
         var cells: Dictionary = {}
@@ -221,6 +268,11 @@ func _build_side(side: String, items: Array, container: GridContainer, mirror_x:
                 _cards_by_item_id[item_id] = card
                 _items_by_id[item_id] = item
                 _side_by_item_id[item_id] = side
+                var meter := DamageMeter.new()
+                meter.custom_minimum_size = Vector2(mini_cell_card_size.x, 6.0)
+                meter.position = Vector2(0.0, mini_cell_card_size.y - 6.0)
+                card.add_child(meter)
+                _meters_by_item_id[item_id] = meter
 
 # Display-only initial shield strip: the sum of armor on the visible ARMOR
 # items. Authoritative values arrive with every event's target_shield_after.
@@ -242,6 +294,12 @@ func _on_event_played(ev: Dictionary) -> void:
                 int(GameState.last_combat_log.get("total_ticks", 0)))
 
         var firing_id := String(ev.get("firing_item_id", ""))
+        _accumulate_damage(ev)
+        _refresh_damage_meters()
+        _maybe_announce_synergy(ev)
+        _refresh_threat_meter(firing_id)
+        _push_log_line(ev, firing_id)
+
         var crit: bool = ev.get("crit", false)
         var hp_loss := float(ev.get("hp_loss", 0.0))
         var shield_absorbed := float(ev.get("shield_absorbed", 0.0))
@@ -290,7 +348,7 @@ func _on_event_played(ev: Dictionary) -> void:
                 AudioManager.play_shield_absorb(impact_pos)
         if hp_loss > 0.0:
                 AudioManager.play_hp_loss()
-        _spawn_damage_float(impact_pos, hp_loss, shield_absorbed, crit)
+        _spawn_damage_float(impact_pos, hp_loss, shield_absorbed, crit, category)
 
         # Shake scales with damage; ScreenEffects adds the crit flash + hit-stop.
         ScreenEffects.shake_from_hit(hp_loss, COMBAT_MAX_HP, crit)
@@ -359,14 +417,16 @@ func _impact_position(ev: Dictionary, target_bar: HpBar) -> Vector2:
         return size / 2.0
 
 # Bouncy floating damage indicator (contract section 4).
-func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, crit: bool) -> void:
+func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, crit: bool,
+                firing_category: String) -> void:
         var label := Label.new()
+        var prefix := _damage_float_prefix(hp_loss, shield_absorbed, firing_category)
         if hp_loss > 0.0:
-                label.text = str(int(round(hp_loss)))
+                label.text = prefix + str(int(round(hp_loss)))
                 label.add_theme_color_override("font_color",
                         SynGridPalette.DANGER if crit else SynGridPalette.TEXT_PRIMARY)
         elif shield_absorbed > 0.0:
-                label.text = "BLOCKED"
+                label.text = prefix + "BLOCKED"
                 label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
         else:
                 return
@@ -400,6 +460,116 @@ func _spawn_damage_float(pos: Vector2, hp_loss: float, shield_absorbed: float, c
         else:
                 spark_color = SynGridPalette.ACCENT_TEAL
         _spawn_damage_sparks(pos, spark_color, 5 if crit else 3)
+
+# -- E2 telemetry overlays (issue #29) --
+
+func _accumulate_damage(ev: Dictionary) -> void:
+        var firing_id := String(ev.get("firing_item_id", ""))
+        if firing_id == "":
+                return
+        var dmg := float(ev.get("actual_damage", 0.0))
+        _cumulative_damage_by_item_id[firing_id] = \
+                float(_cumulative_damage_by_item_id.get(firing_id, 0.0)) + dmg
+
+func _refresh_damage_meters() -> void:
+        var current_max := 0.0
+        for v in _cumulative_damage_by_item_id.values():
+                current_max = maxf(current_max, float(v))
+        if current_max <= 0.0:
+                return
+        for item_id in _meters_by_item_id:
+                var dmg := float(_cumulative_damage_by_item_id.get(item_id, 0.0))
+                _meters_by_item_id[item_id].set_fraction(dmg / current_max)
+
+func _maybe_announce_synergy(ev: Dictionary) -> void:
+        var firing_id := String(ev.get("firing_item_id", ""))
+        var bonus := float(ev.get("synergy_bonus", 0.0))
+        if bonus <= 0.0 or _synergy_announced_item_ids.has(firing_id):
+                return
+        _synergy_announced_item_ids[firing_id] = true
+        var item: Dictionary = _items_by_id.get(firing_id, {})
+        var category := String(item.get("weapon_category", ""))
+        _spawn_synergy_banner(category, bonus)
+
+func _spawn_synergy_banner(category: String, bonus: float) -> void:
+        var chip := PanelContainer.new()
+        chip.add_theme_stylebox_override("panel",
+                ThemeBuilder.build_panel_style(SynGridPalette.tint_for_weapon_category(category),
+                        SynGridPalette.PANEL_BG_ELEVATED))
+        var label := Label.new()
+        label.text = "%s SYNERGY +%d DMG" % [category if category != "" else "ITEM", int(round(bonus))]
+        label.add_theme_font_size_override("font_size", 14)
+        label.add_theme_color_override("font_color", SynGridPalette.tint_for_weapon_category(category))
+        chip.add_child(label)
+        _synergy_stack.add_child(chip)
+        chip.modulate.a = 0.0
+        chip.position.x = 60.0
+        var tw := chip.create_tween().set_parallel(true)
+        tw.tween_property(chip, "modulate:a", 1.0, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        tw.tween_property(chip, "position:x", 0.0, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        var out_tw := chip.create_tween()
+        out_tw.tween_interval(2.0)
+        out_tw.tween_property(chip, "modulate:a", 0.0, 0.25).set_trans(Tween.TRANS_QUAD)
+        out_tw.tween_callback(chip.queue_free)
+
+func _refresh_threat_meter(firing_id: String) -> void:
+        if String(_side_by_item_id.get(firing_id, "")) != "opponent":
+                return
+        var ranked: Array = []
+        for item_id in _cumulative_damage_by_item_id:
+                if String(_side_by_item_id.get(item_id, "")) == "opponent":
+                        ranked.append(item_id)
+        ranked.sort_custom(func(a, b):
+                return _cumulative_damage_by_item_id[a] > _cumulative_damage_by_item_id[b])
+        var top3: Array = ranked.slice(0, 3)
+        if top3 == _threat_last_rendered:
+                return
+        _threat_last_rendered = top3
+        var parts: Array[String] = []
+        for i in top3.size():
+                var item_id: String = top3[i]
+                var name := String(_items_by_id.get(item_id, {}).get("name", "?"))
+                parts.append("%d. %s %d" % [i + 1, name, int(_cumulative_damage_by_item_id[item_id])])
+        _threat_label.text = "  ".join(parts)
+
+func _push_log_line(ev: Dictionary, firing_id: String) -> void:
+        var item_name := String(_items_by_id.get(firing_id, {}).get("name", "?"))
+        var hp_loss := float(ev.get("hp_loss", 0.0))
+        var shield_absorbed := float(ev.get("shield_absorbed", 0.0))
+        var crit: bool = ev.get("crit", false)
+        var text: String
+        if hp_loss > 0.0:
+                text = "%s %s for %d" % [item_name, "crit" if crit else "hits", int(round(hp_loss))]
+        elif shield_absorbed > 0.0:
+                text = "%s blocked" % item_name
+        else:
+                return
+        var line := Label.new()
+        line.text = text
+        line.add_theme_font_size_override("font_size", 14)
+        line.add_theme_color_override("font_color",
+                SynGridPalette.DANGER if crit else SynGridPalette.TEXT_DIM)
+        _log_ticker.add_child(line)
+        line.modulate.a = 0.0
+        var tw := line.create_tween()
+        tw.tween_property(line, "modulate:a", 1.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        if _log_ticker.get_child_count() > _LOG_TICKER_MAX_LINES:
+                var oldest: Label = _log_ticker.get_child(0)
+                var out_tw := oldest.create_tween()
+                out_tw.tween_property(oldest, "modulate:a", 0.0, 0.15)
+                out_tw.tween_callback(oldest.queue_free)
+
+# Pixel font lacks unicode weapon glyphs - ASCII category markers instead.
+func _damage_float_prefix(hp_loss: float, shield_absorbed: float, firing_category: String) -> String:
+        if hp_loss > 0.0:
+                match firing_category:
+                        "MELEE": return "[M] "
+                        "RANGED": return "[R] "
+                        "ARCANE": return "[A] "
+                        _: return ""
+        elif shield_absorbed > 0.0:
+                return "[S] "
+        return ""
 
 # -- Result --
 

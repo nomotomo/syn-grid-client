@@ -71,6 +71,7 @@ func _fabricate_log() -> Dictionary:
 			var firing := "me-sword" if i % 2 == 0 else "me-bow"
 			var crit := i == 6 or i == 12
 			var dmg := 36.0 if crit else 15.0
+			var synergy := 8.0 if firing == "me-sword" and i == 0 else 0.0
 			var absorbed := 0.0
 			if opp_shield > 0.0:
 				absorbed = minf(opp_shield, dmg)
@@ -79,7 +80,8 @@ func _fabricate_log() -> Dictionary:
 			opp_hp -= loss
 			events.append({"tick": (i + 1) * 5, "firing_item_id": firing,
 				"target_player_id": "bot-swordsman", "target_item_id": "opp-sword",
-				"crit": crit, "actual_damage": dmg, "shield_absorbed": absorbed,
+				"crit": crit, "actual_damage": dmg, "synergy_bonus": synergy,
+				"shield_absorbed": absorbed,
 				"hp_loss": loss, "target_hp_after": opp_hp,
 				"target_shield_after": opp_shield})
 	# Last player strike must actually end the match so offline harness exercises
