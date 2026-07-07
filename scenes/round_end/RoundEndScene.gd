@@ -31,6 +31,7 @@ const MAX_TRIUMPH: int = 10
 @onready var _background: ColorRect = %Background
 @onready var _banner: Label = %Banner
 @onready var _round_caption: Label = %RoundCaption
+@onready var _life_caption: Label = %LifeCaption
 @onready var _hearts_row: HBoxContainer = %HeartsRow
 @onready var _triumph_caption: Label = %TriumphCaption
 @onready var _orbs_row: HBoxContainer = %OrbsRow
@@ -87,20 +88,22 @@ func _layout_screen() -> void:
 	_banner.size = Vector2(size.x - 80.0, 120.0)
 	_round_caption.position = Vector2(40.0, size.y * 0.22)
 	_round_caption.size = Vector2(size.x - 80.0, 32.0)
-	_hearts_row.position = Vector2(40.0, size.y * 0.34)
+	_life_caption.position = Vector2(40.0, size.y * 0.30)
+	_life_caption.size = Vector2(size.x - 80.0, 32.0)
+	_hearts_row.position = Vector2(40.0, size.y * 0.36)
 	_hearts_row.size = Vector2(size.x - 80.0, heart_size)
-	_triumph_caption.position = Vector2(40.0, size.y * 0.44)
+	_triumph_caption.position = Vector2(40.0, size.y * 0.46)
 	_triumph_caption.size = Vector2(size.x - 80.0, 32.0)
-	_orbs_row.position = Vector2(40.0, size.y * 0.48)
+	_orbs_row.position = Vector2(40.0, size.y * 0.50)
 	_orbs_row.size = Vector2(size.x - 80.0, orb_size)
-	_payout_caption.position = Vector2(40.0, size.y * 0.60)
+	_payout_caption.position = Vector2(40.0, size.y * 0.62)
 	_payout_caption.size = Vector2(size.x - 80.0, 32.0)
-	_payout_value.position = Vector2(40.0, size.y * 0.64)
+	_payout_value.position = Vector2(40.0, size.y * 0.66)
 	_payout_value.size = Vector2(size.x - 80.0, 48.0)
 	var button_w := size.x - 80.0
-	_continue_button.position = Vector2(40.0, size.y * 0.76)
+	_continue_button.position = Vector2(40.0, size.y * 0.78)
 	_continue_button.size = Vector2(button_w, 140.0)
-	_new_run_button.position = Vector2(40.0, size.y * 0.76)
+	_new_run_button.position = Vector2(40.0, size.y * 0.78)
 	_new_run_button.size = Vector2(button_w, 140.0)
 
 func _run_ceremony() -> void:
