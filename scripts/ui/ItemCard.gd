@@ -52,6 +52,9 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 @export var snap_bounce_duration: float = 0.08
 @export var snap_settle_duration: float = 0.04
 
+# Combat replay match-ending shatter (issue #28).
+@export var shatter_duration: float = 0.35
+
 # Neon Grimoire card treatment.
 @export var tint_bg_alpha: float = 0.14
 @export var tint_bg_alpha_dragging: float = 0.24
@@ -197,6 +200,14 @@ func play_snap_bounce() -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	_scale_tween.tween_property(self, "scale:y", 1.0, snap_settle_duration) \
 		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+
+func play_shatter() -> void:
+	_kill_scale_tween()
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(self, "scale", Vector2(1.2, 0.4), shatter_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(self, "modulate:a", 0.0, shatter_duration) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 func _gui_input(event: InputEvent) -> void:
 	# Use each event's own position data rather than get_global_mouse_position(),

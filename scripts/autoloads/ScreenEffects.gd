@@ -8,6 +8,8 @@ const FLASH_SHADER: Shader = preload("res://assets/shaders/screen_flash.gdshader
 @export var shake_decay: float = 0.85        # per 60fps-frame multiplier, delta-corrected
 @export var flash_color: Color = Color(1, 1, 1, 1)
 @export var hitstop_frames: int = 2
+@export var crit_zoom_scale: float = 0.95
+@export var crit_zoom_return_duration: float = 0.12
 
 var _camera: Camera2D
 var _flash_rect: ColorRect
@@ -43,6 +45,7 @@ func shake_from_hit(damage_dealt: float, max_target_hp: float, is_crit: bool) ->
 	if is_crit:
 		intensity *= 2.5
 		_apply_crit_flash()
+		_apply_crit_zoom()
 		hitstop()
 	_shake_intensity = maxf(_shake_intensity, intensity)
 
@@ -65,6 +68,16 @@ func _apply_crit_flash() -> void:
 	_flash_material.set_shader_parameter("alpha_value", 1.0)
 	await get_tree().process_frame
 	_flash_material.set_shader_parameter("alpha_value", 0.0)
+
+func _apply_crit_zoom() -> void:
+	if _camera == null:
+		return
+	_camera.zoom = Vector2(crit_zoom_scale, crit_zoom_scale)
+	for _i in hitstop_frames:
+		await get_tree().process_frame
+	var tw := create_tween()
+	tw.tween_property(_camera, "zoom", Vector2.ONE, crit_zoom_return_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _process(delta: float) -> void:
 	if _camera == null or _shake_intensity < 0.01:
