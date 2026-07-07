@@ -204,12 +204,20 @@ func _run_live_verify(screenshot_path: String) -> void:
 
 	print("live-verify: round before=%d after=%d" % [before_round, GameState.current_round])
 	_instance_scene()
-	for _i in 90:
+	var frames := 0
+	while not (_replay_scene_continue_visible() or frames >= 400):
 		await get_tree().process_frame
-	print("live-verify: banner=%s status=%s" % [
+		frames += 1
+	print("live-verify: banner=%s status=%s frames=%d" % [
 		_scene.get_node("%Banner").text,
 		_scene.get_node("%StatusLabel").text])
 	_save_and_quit(screenshot_path)
+
+func _replay_scene_continue_visible() -> bool:
+	if _scene == null:
+		return false
+	return _scene.get_node("%ContinueButton").visible \
+		or _scene.get_node("%NewRunButton").visible
 
 func _save_and_quit(screenshot_path: String) -> void:
 	var tex := get_viewport().get_texture()
