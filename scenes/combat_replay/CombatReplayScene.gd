@@ -246,6 +246,7 @@ func _on_event_played(ev: Dictionary) -> void:
         var hp_loss := float(ev.get("hp_loss", 0.0))
         var shield_absorbed := float(ev.get("shield_absorbed", 0.0))
         var target_hp_after := float(ev.get("target_hp_after", 0.0))
+        var is_match_ending := hp_loss > 0.0 and target_hp_after <= 0.0
 
         _play_lunge(firing_id)
         _play_fire_sfx(firing_id, crit)
@@ -266,7 +267,8 @@ func _on_event_played(ev: Dictionary) -> void:
 
         var impact_pos := _impact_position(ev, target_bar)
         var target_card: ItemCard = _cards_by_item_id.get(String(ev.get("target_item_id", "")))
-        _play_hit_reaction(target_card)
+        if not is_match_ending:
+                _play_hit_reaction(target_card)
         if firing_card != null:
                 _spawn_muzzle_flash(firing_card.get_global_rect().get_center(), category)
                 _spawn_projectile(firing_card.get_global_rect().get_center(),
@@ -280,7 +282,7 @@ func _on_event_played(ev: Dictionary) -> void:
                 _hit_count += 1
         if crit:
                 _crit_count += 1
-        if hp_loss > 0.0 and target_hp_after <= 0.0:
+        if is_match_ending:
                 _ko_count += 1
         _refresh_hit_counter()
 
@@ -295,13 +297,12 @@ func _on_event_played(ev: Dictionary) -> void:
 
         # Killing-blow accent: on the shot that ends a life bar, paint a soft
         # DANGER wash over the whole viewport that fades out over 0.35s.
-        if hp_loss > 0.0 and target_hp_after <= 0.0:
-                var dying_card: ItemCard = _cards_by_item_id.get(String(ev.get("target_item_id", "")))
-                if dying_card != null:
-                        dying_card.play_shatter()
+        if is_match_ending:
+                if target_card != null:
+                        target_card.play_shatter()
                         var dying_item: Dictionary = _items_by_id.get(String(ev.get("target_item_id", "")), {})
                         var shatter_color := _projectile_color(String(dying_item.get("weapon_category", "")))
-                        _spawn_damage_sparks(dying_card.get_global_rect().get_center(), shatter_color, 5)
+                        _spawn_damage_sparks(target_card.get_global_rect().get_center(), shatter_color, 5)
                 _play_killing_blow_effect()
 
 func _play_hit_reaction(target_card: ItemCard) -> void:
