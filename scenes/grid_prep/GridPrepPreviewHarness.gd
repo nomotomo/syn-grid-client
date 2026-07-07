@@ -97,14 +97,23 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	_save_and_quit(screenshot_path)
 
 func _run_live_verify(screenshot_path: String) -> void:
+	# Live mode uses a real server. Authenticate gives us a starting balance,
+	# and we intentionally SKIP the round-start gold grant here so the harness
+	# can reliably afford purchases (otherwise the grant may overwrite the
+	# balance depending on server rules).
 	GameState.current_round = 1
+	GameState.gold_awarded_round = GameState.current_round
 	# Lambdas capture locals by value in GDScript; a Dictionary is shared by
 	# reference so the signal handler's write is visible to the wait loop.
 	var state := {"authed": false}
 	ApiClient.authenticate_completed.connect(func(data: Dictionary) -> void:
 		GameState.hydrate_from_auth(data)
 		state["authed"] = true, CONNECT_ONE_SHOT)
-	ApiClient.authenticate(GameState.get_or_create_device_id())
+	# Use a unique device id so the harness always starts from a fresh
+	# server-side profile (avoids stale low-gold runs).
+	var device_id := "live-harness-%d-%d" % [int(Time.get_unix_time_from_system()), randi() % 100000]
+	GameState.player_id = device_id
+	ApiClient.authenticate(device_id)
 	for _i in 120:
 		if state["authed"]:
 			break
@@ -115,45 +124,92 @@ func _run_live_verify(screenshot_path: String) -> void:
 		return
 
 	_instance_grid()
-	# Real award_round_gold + roll_shop round-trips.
-	for _i in 90:
+	# Wait for the shop row to populate (roll_shop is async).
+	for _i in 240:
+		if _grid.get_node("%ShopRow").get_child_count() > 0:
+			break
 		await get_tree().process_frame
+	if _grid.get_node("%ShopRow").get_child_count() == 0:
+		printerr("live-verify: shop did not populate")
+		get_tree().quit(1)
+		return
 
-	# Buy Iron Sword + Leather Armor when available so live synergy receptors match issue #43.
-	var target_templates: Array[String] = ["Iron Sword", "Leather Armor"]
-	for template_name in target_templates:
-		var found := false
-		for card: ItemCard in _grid.get_node("%ShopRow").get_children():
-			var slot: Dictionary = card.get("_item_data")
-			if String(slot.get("template_name", "")) != template_name:
-				continue
-			if int(slot.get("buy_price", 999999)) > GameState.gold:
-				break
-			_grid._on_shop_card_pressed(slot)
-			found = true
-			break
-		if not found:
-			break
-		for _i in 45:
-			await get_tree().process_frame
-
-	# Place purchased items adjacent; the real validate_grid response drives synergy glow.
-	var validate_state := {"done": false}
+	# Exercise live validate_grid synergies. Prefer the observed playtest pair,
+	# but retry/reroll and fall back to buying/placing additional items instead
+	# of silently producing an empty screenshot.
+	var validate_state := {"has_synergy": false, "last_fail": ""}
 	ApiClient.validate_grid_completed.connect(func(data: Dictionary) -> void:
-		if not data.get("synergies", []).is_empty():
-			validate_state["done"] = true
+		validate_state["has_synergy"] = not data.get("synergies", []).is_empty()
 	)
-	if _bench_card_for_name("Iron Sword") != null:
-		_auto_place_item_by_card(_bench_card_for_name("Iron Sword"), Vector2i(1, 1))
-		for _i in 45:
-			await get_tree().process_frame
-	if _bench_card_for_name("Leather Armor") != null:
-		_auto_place_item_by_card(_bench_card_for_name("Leather Armor"), Vector2i(2, 1))
+	ApiClient.validate_grid_failed.connect(func(_code: int, reason: String) -> void:
+		validate_state["last_fail"] = reason
+	)
 
-	for _i in 180:
-		if validate_state["done"]:
-			break
-		await get_tree().process_frame
+	var attempts := 0
+	while attempts < 3 and not validate_state["has_synergy"]:
+		attempts += 1
+
+		# Attempt to buy a known-synergy pair if present/affordable.
+		for template_name in ["Iron Sword", "Leather Armor"]:
+			for card: ItemCard in _grid.get_node("%ShopRow").get_children():
+				var slot: Dictionary = card.get("_item_data")
+				if String(slot.get("template_name", "")) != template_name:
+					continue
+				if int(slot.get("buy_price", 999999)) > GameState.gold:
+					break
+				_grid._on_shop_card_pressed(slot)
+				for _i in 45:
+					await get_tree().process_frame
+				break
+
+		# Fallback: buy cheapest affordable until we have several bench items to place.
+		var safety_iters := 0
+		while _grid.get_node("%BenchRow").get_child_count() < 4 and safety_iters < 6:
+			safety_iters += 1
+			var cheapest: Dictionary = {}
+			for card: ItemCard in _grid.get_node("%ShopRow").get_children():
+				var slot: Dictionary = card.get("_item_data")
+				var price := int(slot.get("buy_price", 999999))
+				if price <= GameState.gold and (cheapest.is_empty() or price < int(cheapest.get("buy_price", 999999))):
+					cheapest = slot
+			if cheapest.is_empty():
+				break
+			_grid._on_shop_card_pressed(cheapest)
+			for _i in 45:
+				await get_tree().process_frame
+
+		# Place up to four bench items in a contiguous row to maximize adjacency.
+		for x in [1, 2, 3, 4]:
+			if _grid.get_node("%BenchRow").get_child_count() == 0:
+				break
+			var cell: GridCell = _grid._cell_at(x, 1)
+			if cell == null:
+				break
+			_auto_place(0, Vector2i(x, 1))
+			for _i in 30:
+				await get_tree().process_frame
+
+		# Wait for validate_grid to return at least one synergy.
+		for _i in 240:
+			if validate_state["has_synergy"]:
+				break
+			await get_tree().process_frame
+
+		# If still no synergy, force a reroll and try again.
+		if not validate_state["has_synergy"]:
+			ApiClient.roll_shop(GameState.current_round)
+			for _i in 90:
+				await get_tree().process_frame
+
+	if not validate_state["has_synergy"]:
+		printerr("live-verify: did not exercise a synergy after %d attempt(s) (gold=%d bench=%d equipped=%d) - failing loud" % [
+			attempts, GameState.gold, GameState.bench_items.size(), GameState.equipped_items.size()
+		])
+		if validate_state["last_fail"] != "":
+			printerr("live-verify: last validate_grid_failed reason=%s" % validate_state["last_fail"])
+		get_tree().quit(1)
+		return
+
 	for _i in 50:
 		await get_tree().process_frame
 
