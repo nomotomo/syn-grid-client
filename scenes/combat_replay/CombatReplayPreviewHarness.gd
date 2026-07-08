@@ -7,6 +7,9 @@ extends Control
 # Modes (both save a PNG mid-replay then quit):
 #   SYNGRID_SCREENSHOT=/path/out.png                  - offline: fabricated
 #       log with crits and shield absorbs, no Go server.
+#   SYNGRID_SCREENSHOT=/path/out.png SYNGRID_HINT=losing
+#       offline losing-hard fixture (player HP <30%, opponent >60%) so the
+#       issue #31 tip pill screenshots.
 #   SYNGRID_SCREENSHOT=/path/out.png SYNGRID_LIVE=1   - live: authenticates,
 #       buys + places a real item, runs a real match against a bot ghost,
 #       and replays the server's actual combat log.
@@ -52,7 +55,66 @@ func _seed_offline_state() -> void:
 				"base_attributes": {"armor_rating": 25.0}},
 		],
 	}
-	GameState.last_combat_log = _fabricate_log()
+	if OS.get_environment("SYNGRID_HINT") == "losing":
+		GameState.last_combat_log = _fabricate_losing_hard_log()
+	else:
+		GameState.last_combat_log = _fabricate_log()
+
+func _fabricate_losing_hard_log() -> Dictionary:
+	# Opponent stays high while player is drained past the 30% threshold so
+	# CombatReplayScene's losing-hard tip pill fires once mid-replay.
+	var events: Array = []
+	var my_hp := 1000.0
+	var opp_hp := 920.0
+	for i in 12:
+		var loss := 80.0 if i < 10 else 20.0
+		my_hp = maxf(0.0, my_hp - loss)
+		events.append({
+			"tick": (i + 1) * 5,
+			"firing_item_id": "opp-sword",
+			"target_player_id": "preview-player",
+			"target_item_id": "me-armor",
+			"crit": i == 9,
+			"actual_damage": loss,
+			"synergy_bonus": 0.0,
+			"shield_absorbed": 0.0,
+			"hp_loss": loss,
+			"target_hp_after": my_hp,
+			"target_shield_after": 0.0,
+		})
+		if i % 4 == 3:
+			opp_hp -= 15.0
+			events.append({
+				"tick": (i + 1) * 5 + 1,
+				"firing_item_id": "me-sword",
+				"target_player_id": "bot-swordsman",
+				"target_item_id": "opp-sword",
+				"crit": false,
+				"actual_damage": 15.0,
+				"synergy_bonus": 0.0,
+				"shield_absorbed": 0.0,
+				"hp_loss": 15.0,
+				"target_hp_after": opp_hp,
+				"target_shield_after": 0.0,
+			})
+	return {
+		"attacker_id": "preview-player",
+		"defender_id": "bot-swordsman",
+		"winner_id": "bot-swordsman",
+		"total_ticks": 80,
+		"events": events,
+		"attacker_hp_final": my_hp,
+		"defender_hp_final": opp_hp,
+		"summary": {
+			"item_stats": [
+				{"item_id": "opp-sword", "damage_dealt": 800.0, "damage_taken": 45.0,
+					"shots_fired": 12, "crits": 1, "kills": 0},
+				{"item_id": "me-sword", "damage_dealt": 45.0, "damage_taken": 0.0,
+					"shots_fired": 3, "crits": 0, "kills": 0},
+			],
+			"turning_point_tick": 40,
+		},
+	}
 
 func _fabricate_log() -> Dictionary:
 	var events: Array = []
@@ -112,10 +174,13 @@ func _instance_replay() -> void:
 	add_child(_replay)
 
 func _run_offline_verify(screenshot_path: String) -> void:
-	# Intro delay + ~9 events in: floats, lunges, and bar drain are on screen.
-	for _i in 100:
-		await get_tree().process_frame
-	print("auto-verify: tick=%s" % _replay.get_node("%TickLabel").text)
+	# Intro delay + enough ticks for juice / losing-hard tip to be visible.
+	# Prefer wall-clock so display+audio paths don't starve the harness.
+	await get_tree().create_timer(2.2).timeout
+	print("auto-verify: tick=%s hint_shown=%s" % [
+		_replay.get_node("%TickLabel").text,
+		str(_replay.get("_losing_hint_shown")),
+	])
 	_save_and_quit(screenshot_path)
 
 func _run_live_verify(screenshot_path: String) -> void:
@@ -199,5 +264,7 @@ func _save_and_quit(screenshot_path: String) -> void:
 			print("auto-verify: no image buffer (headless) - skipping screenshot")
 	else:
 		print("auto-verify: no viewport texture (headless) - skipping screenshot")
-	await AudioManager.release_bgm_before_quit()
-	get_tree().quit()
+	# Bound BGM teardown so a stuck AudioServer mixer cannot hang the harness.
+	AudioManager.release_bgm_streams()
+	get_tree().create_timer(0.35).timeout.connect(func() -> void:
+		get_tree().quit())

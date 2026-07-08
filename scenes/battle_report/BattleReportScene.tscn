@@ -1,0 +1,41 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/battle_report/BattleReportScene.gd" id="1"]
+
+[node name="BattleReportScene" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.1, 1)
+
+[node name="PageTitle" type="Label" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+theme_type_variation = &"HudTitleLabel"
+theme_override_font_sizes/font_size = 22
+text = "VERDICT"
+
+[node name="PageHost" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="SkipButton" type="Button" parent="."]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 16
+text = "SKIP"
+
+[node name="PrevButton" type="Button" parent="."]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = "PREV"
+
+[node name="NextButton" type="Button" parent="."]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = "NEXT"
