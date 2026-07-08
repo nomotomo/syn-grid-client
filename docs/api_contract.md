@@ -94,7 +94,13 @@ Response:
 ```json
 {
   "updated_grid": { ...Grid object... },
-  "new_balance": 19
+  "new_balance": 19,
+  "merges": [
+    {
+      "consumed_item_ids": ["uuid-a", "uuid-b", "uuid-c"],
+      "produced_item": { ...Item object... }
+    }
+  ]
 }
 ```
 
@@ -102,6 +108,7 @@ The server re-derives the round's shop to confirm the template is available.
 Triple-merge is evaluated after the item is added.
 `updated_grid.bench_reserve` contains all items the server knows about.
 Update `GameState.gold = new_balance` and sync the bench from `updated_grid`.
+`merges` is empty when the purchase didn't trigger any merge. When present, use it to play the merge-flash animation; the client never computes merges.
 
 ### POST /v1/shop/sell
 
@@ -498,7 +505,7 @@ Grid {
 Item {
   item_id:          string   (UUID, server-assigned)
   name:             string
-  level:            int      (0 or 1 = base item; 2 = Level-2 merged)
+  level:            int      (0 or 1 = base item; 2 = Level-2 merged; 3 = Level-3 double-merged)
   dimensions:       { width: int, height: int }   (canonical unrotated dims; multi-cell weapons exist)
   placement_coords: { x: int, y: int }             (anchor cell; omit when on bench)
   item_type:        "WEAPON" | "ARMOR" | "AUXILIARY" | "POTION"
