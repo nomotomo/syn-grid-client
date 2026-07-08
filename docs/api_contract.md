@@ -209,11 +209,30 @@ Response:
         "shield_absorbed": 0.0,
         "hp_loss": 12.0,
         "target_hp_after": 988.0,
-        "target_shield_after": 0.0
+        "target_shield_after": 0.0,
+        "damage_type": "PHYSICAL",
+        "source_cell": { "x": 0, "y": 0 },
+        "target_cell": { "x": 2, "y": 1 },
+        "overkill": false,
+        "killing_blow": false,
+        "synergy_ids": ["uuid-of-neighbor-armor"]
       }
     ],
     "attacker_hp_final": 725.0,
-    "defender_hp_final": 0.0
+    "defender_hp_final": 0.0,
+    "summary": {
+      "item_stats": [
+        {
+          "item_id": "uuid-of-shortsword",
+          "damage_dealt": 275.0,
+          "damage_taken": 0.0,
+          "shots_fired": 12,
+          "crits": 2,
+          "kills": 1
+        }
+      ],
+      "turning_point_tick": 87
+    }
   },
   "opponent_grid": {
     "player_id": "ghost-player-uuid",
@@ -225,6 +244,8 @@ Response:
 
 `status` values: `MATCH_STATUS_PLAYED`, `MATCH_STATUS_NO_OPPONENT`.
 `combat_log` and `opponent_grid` are populated only when status is `MATCH_STATUS_PLAYED`.
+`damage_type` is always `"PHYSICAL"` today; elemental types land with server G2 (#28).
+`combat_log.summary` carries per-item match totals and `turning_point_tick` (the tick of the largest single `hp_loss` hit).
 `opponent_grid` is the ghost's public board (identity, dimensions, equipped items only).
 Bench, gold, and life values are stripped server-side - they are private to the ghost.
 Store it in `GameState.opponent_grid` so `CombatReplayScene` can render the enemy board.
