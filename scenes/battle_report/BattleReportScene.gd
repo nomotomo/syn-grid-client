@@ -13,7 +13,9 @@ const PAGE_COUNT: int = 5
 @export var banner_pop_duration: float = 0.12
 @export var banner_settle_duration: float = 0.06
 @export var page_tween_duration: float = 0.18
-@export var mini_cell_card_size: Vector2 = Vector2(72, 72)
+# Match CombatReplayScene.mini_cell_card_size exactly - smaller values clip
+# ItemCard name labels inside GridCell (PR #57 review blocker).
+@export var mini_cell_card_size: Vector2 = Vector2(104, 104)
 @export var grid_columns: int = 4
 @export var grid_rows: int = 4
 @export var ranked_bar_max_width: float = 220.0
@@ -430,6 +432,17 @@ func _build_advice_page(page: Control) -> void:
 
 func _build_heatmap_page(page: Control) -> void:
 	var w := _vp().x
+	var host_h := _page_host.size.y if _page_host.size.y > 1.0 else (_vp().y - 200.0)
+	# 104x104 cards (same as CombatReplay) make two 4x4 grids taller than the
+	# page host at 540x960 - scroll so nothing clips against the chrome.
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(0.0, 0.0)
+	scroll.size = Vector2(w, host_h)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	page.add_child(scroll)
+	var body := Control.new()
+	scroll.add_child(body)
+
 	var caption := Label.new()
 	caption.text = "Green = dmg dealt  Blue = dmg taken  Red = never fired"
 	caption.add_theme_font_size_override("font_size", 12)
@@ -437,40 +450,44 @@ func _build_heatmap_page(page: Control) -> void:
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.position = Vector2(20.0, 4.0)
 	caption.size = Vector2(w - 40.0, 28.0)
-	page.add_child(caption)
+	body.add_child(caption)
+
+	var cell_sz := _cell_outer_size()
+	var grid_total := cell_sz * Vector2(grid_columns, grid_rows)
+	var center_x := (w - grid_total.x) / 2.0
 
 	var opp_label := Label.new()
 	opp_label.text = "OPPONENT"
 	opp_label.add_theme_font_size_override("font_size", 12)
 	opp_label.add_theme_color_override("font_color", SynGridPalette.DANGER)
 	opp_label.position = Vector2(40.0, 36.0)
-	page.add_child(opp_label)
+	body.add_child(opp_label)
 	var opp_grid := GridContainer.new()
 	opp_grid.columns = grid_columns
 	opp_grid.add_theme_constant_override("h_separation", 0)
 	opp_grid.add_theme_constant_override("v_separation", 0)
-	var cell_sz := _cell_outer_size()
-	var grid_total := cell_sz * Vector2(grid_columns, grid_rows)
-	var center_x := (w - grid_total.x) / 2.0
 	opp_grid.position = Vector2(center_x, 56.0)
 	opp_grid.size = grid_total
-	page.add_child(opp_grid)
+	body.add_child(opp_grid)
 	_fill_heat_grid(opp_grid, GameState.opponent_grid.get("equipped_items", []), true, "opp")
 
+	var you_y := 56.0 + grid_total.y + 20.0
 	var you_label := Label.new()
 	you_label.text = "YOU"
 	you_label.add_theme_font_size_override("font_size", 12)
 	you_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
-	you_label.position = Vector2(40.0, 56.0 + grid_total.y + 20.0)
-	page.add_child(you_label)
+	you_label.position = Vector2(40.0, you_y)
+	body.add_child(you_label)
 	var player_grid := GridContainer.new()
 	player_grid.columns = grid_columns
 	player_grid.add_theme_constant_override("h_separation", 0)
 	player_grid.add_theme_constant_override("v_separation", 0)
-	player_grid.position = Vector2(center_x, 56.0 + grid_total.y + 40.0)
+	player_grid.position = Vector2(center_x, you_y + 20.0)
 	player_grid.size = grid_total
-	page.add_child(player_grid)
+	body.add_child(player_grid)
 	_fill_heat_grid(player_grid, GameState.equipped_items, false, "own")
+
+	body.custom_minimum_size = Vector2(w, player_grid.position.y + grid_total.y + 16.0)
 
 func _cell_outer_size() -> Vector2:
 	return mini_cell_card_size + Vector2.ONE * (ThemeBuilder.PANEL_CONTENT_MARGIN * 2.0)
@@ -529,9 +546,12 @@ func _fill_heat_grid(container: GridContainer, items: Array, mirror_x: bool, sid
 				clampf(green.a + blue.a, 0.08, 0.7))
 		cell.set_heat_tint(tint)
 		var card: ItemCard = ITEM_CARD_SCENE.instantiate()
+		# Same assignment order as CombatReplayScene._build_side so card_size
+		# is stamped before _ready() applies custom_minimum_size.
 		card.card_size = mini_cell_card_size
 		card.draggable = false
 		cell.add_child(card)
+		card.custom_minimum_size = mini_cell_card_size
 		card.set_item_data(item)
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
