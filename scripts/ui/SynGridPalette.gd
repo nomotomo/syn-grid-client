@@ -48,6 +48,10 @@ const HP_LOW: Color = Color(0.85, 0.10, 0.10)
 # Crimson - danger + fatal HP + defeat wordmark (juice_manual.md section 4).
 const DANGER: Color = Color(0.85, 0.10, 0.10)
 
+# Battle-report heatmap: damage-taken tint (issue #31). No existing blue in
+# the neon accents - kept separate from HP / danger so heat reads cleanly.
+const HEAT_TAKEN: Color = Color(0.2, 0.4, 0.9)
+
 # --- Rarity / tier tints (used on ItemCard tier ring). --------------------
 const TIER_BRONZE: Color = Color(0.78, 0.50, 0.29)
 const TIER_SILVER: Color = Color(0.72, 0.77, 0.82)

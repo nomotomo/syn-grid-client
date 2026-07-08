@@ -14,6 +14,7 @@ extends Control
 
 const PREP_SCENE_PATH: String = "res://scenes/grid_prep/GridPrepScene.tscn"
 const ROUND_END_SCENE_PATH: String = "res://scenes/round_end/RoundEndScene.tscn"
+const BATTLE_REPORT_SCENE_PATH: String = "res://scenes/battle_report/BattleReportScene.tscn"
 const ITEM_CARD_SCENE: PackedScene = preload("res://scenes/ui/ItemCard.tscn")
 const COMBAT_MAX_HP: float = 1000.0   # game-rules.md: combat HP baseline
 
@@ -64,6 +65,8 @@ var _cards_by_item_id: Dictionary = {}   # item_id -> ItemCard
 var _items_by_id: Dictionary = {}        # item_id -> item Dictionary
 var _side_by_item_id: Dictionary = {}    # item_id -> "player" | "opponent"
 var _bars_by_player_id: Dictionary = {}  # player_id -> HpBar
+var _current_hp_by_player_id: Dictionary = {}  # player_id -> float (from target_hp_after)
+var _opponent_player_id: String = ""
 var _cumulative_damage_by_item_id: Dictionary = {}  # item_id -> float
 var _meters_by_item_id: Dictionary = {}  # item_id -> DamageMeter
 var _synergy_announced_item_ids: Dictionary = {}  # item_id -> true
@@ -73,6 +76,8 @@ var _threat_label: Label = null
 var _threat_last_rendered: Array = []
 var _log_ticker: VBoxContainer = null
 const _LOG_TICKER_MAX_LINES: int = 4
+var _losing_hint_shown: bool = false
+var _losing_hint_pill: Control = null
 var _result_shown: bool = false
 var _round_played: int = 0
 var _fight_won: bool = false
@@ -160,6 +165,9 @@ func _ready() -> void:
         var defender_id := String(log.get("defender_id", ""))
         _bars_by_player_id[attacker_id] = _player_bar if attacker_id == GameState.player_id else _opp_bar
         _bars_by_player_id[defender_id] = _player_bar if defender_id == GameState.player_id else _opp_bar
+        _opponent_player_id = defender_id if attacker_id == GameState.player_id else attacker_id
+        _current_hp_by_player_id[attacker_id] = COMBAT_MAX_HP
+        _current_hp_by_player_id[defender_id] = COMBAT_MAX_HP
 
         _log_player.event_played.connect(_on_event_played)
         _log_player.playback_finished.connect(_on_playback_finished)
@@ -323,10 +331,13 @@ func _on_event_played(ev: Dictionary) -> void:
         var attacker_side := String(_side_by_item_id.get(firing_id, "player"))
 
         # Server-authoritative bar update.
-        var target_bar: HpBar = _bars_by_player_id.get(String(ev.get("target_player_id", "")))
+        var target_player_id := String(ev.get("target_player_id", ""))
+        var target_bar: HpBar = _bars_by_player_id.get(target_player_id)
         if target_bar != null:
                 target_bar.set_state(target_hp_after,
                         float(ev.get("target_shield_after", 0.0)))
+        _current_hp_by_player_id[target_player_id] = target_hp_after
+        _maybe_show_losing_hint()
 
         var impact_pos := _impact_position(ev, target_bar)
         var target_card: ItemCard = _cards_by_item_id.get(String(ev.get("target_item_id", "")))
@@ -569,6 +580,48 @@ func _push_log_line(ev: Dictionary, firing_id: String) -> void:
                 out_tw.tween_property(oldest, "modulate:a", 0.0, 0.15)
                 out_tw.tween_callback(oldest.queue_free)
 
+# Issue #31: fire once when clearly losing hard (player HP < 30% while opponent
+# still > 60%). Standing amber tip pointing at the upcoming Battle Report.
+func _maybe_show_losing_hint() -> void:
+        if _losing_hint_shown:
+                return
+        var player_hp := float(_current_hp_by_player_id.get(GameState.player_id, COMBAT_MAX_HP))
+        var opp_hp := float(_current_hp_by_player_id.get(_opponent_player_id, COMBAT_MAX_HP))
+        var player_fraction := player_hp / COMBAT_MAX_HP
+        var opponent_fraction := opp_hp / COMBAT_MAX_HP
+        if player_fraction < 0.3 and opponent_fraction > 0.6:
+                _losing_hint_shown = true
+                _show_losing_hint_pill()
+
+func _show_losing_hint_pill() -> void:
+        if _losing_hint_pill != null:
+                return
+        _losing_hint_pill = PanelContainer.new()
+        _losing_hint_pill.add_theme_stylebox_override("panel",
+                ThemeBuilder.build_panel_style(SynGridPalette.ACCENT_AMBER,
+                        SynGridPalette.PANEL_BG_ELEVATED))
+        var label := Label.new()
+        label.text = "TIP: Losing hard - check Battle Report for placement suggestions"
+        label.add_theme_font_size_override("font_size", 13)
+        label.add_theme_color_override("font_color", SynGridPalette.ACCENT_AMBER)
+        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        label.custom_minimum_size = Vector2(size.x - 100.0, 0.0)
+        _losing_hint_pill.add_child(label)
+        _losing_hint_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(_losing_hint_pill)
+        # Stacked below the log ticker in the reserved middle-band VS gap so the
+        # two never overlap (#29 telemetry layout).
+        _losing_hint_pill.position = Vector2(40.0, size.y * 0.465 + 64.0)
+        _losing_hint_pill.size = Vector2(size.x - 80.0, 44.0)
+        _losing_hint_pill.modulate.a = 0.0
+        _losing_hint_pill.scale = Vector2(0.92, 0.92)
+        _losing_hint_pill.pivot_offset = _losing_hint_pill.size / 2.0
+        var tw := _losing_hint_pill.create_tween()
+        tw.tween_property(_losing_hint_pill, "modulate:a", 1.0, 0.18) \
+                .set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        tw.parallel().tween_property(_losing_hint_pill, "scale", Vector2.ONE, 0.18) \
+                .set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
 # Pixel font lacks unicode weapon glyphs - ASCII category markers instead.
 func _damage_float_prefix(hp_loss: float, shield_absorbed: float, firing_category: String) -> String:
         if hp_loss > 0.0:
@@ -697,7 +750,7 @@ func _on_continue_pressed() -> void:
                         get_tree().change_scene_to_file(PREP_SCENE_PATH)
                 ContinueAction.CONTINUE:
                         if _finalize_synced:
-                                get_tree().change_scene_to_file(ROUND_END_SCENE_PATH)
+                                get_tree().change_scene_to_file(BATTLE_REPORT_SCENE_PATH)
 
 func _set_finalize_status(text: String) -> void:
         _status_label.text = text

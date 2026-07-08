@@ -24,6 +24,7 @@ var occupied: bool = false
 
 var _pulse_tween: Tween = null
 var _empty_glyph: Label = null
+var _heat_overlay: ColorRect = null
 
 func _ready() -> void:
 	_empty_glyph = Label.new()
@@ -105,6 +106,17 @@ func highlight(on: bool, valid: bool = true) -> void:
 			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 	else:
 		self_modulate = Color.WHITE
+
+# Battle-report heatmap only. Call after setup() and before parenting an
+# ItemCard so the overlay draws beneath the card. Not wired into highlight()
+# or the drag-hover path - GridPrep/CombatReplay never call this.
+func set_heat_tint(color: Color) -> void:
+	if _heat_overlay == null:
+		_heat_overlay = ColorRect.new()
+		_heat_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_heat_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_heat_overlay)
+	_heat_overlay.color = color
 
 func _on_child_changed(_node: Node) -> void:
 	# Deferred so has_card() sees the final child list, not the mid-transition one.
