@@ -222,7 +222,20 @@ Response:
         "target_cell": { "x": 2, "y": 1 },
         "overkill": false,
         "killing_blow": false,
-        "synergy_ids": ["uuid-of-neighbor-armor"]
+        "synergy_ids": ["uuid-of-neighbor-armor"],
+        "status_applied": "FIRE",
+        "stun_skipped": false,
+        "status_tick": false
+      },
+      {
+        "tick": 15,
+        "firing_item_id": "",
+        "target_player_id": "ghost-player-uuid",
+        "hp_loss": 5.0,
+        "target_hp_after": 983.0,
+        "target_shield_after": 0.0,
+        "damage_type": "FIRE",
+        "status_tick": true
       }
     ],
     "attacker_hp_final": 725.0,
@@ -256,7 +269,10 @@ Response:
 `combat_log` and `opponent_grid` are populated only when status is `MATCH_STATUS_PLAYED`.
 `objective_id`, `objective_text`, and `bonus_triumph` announce the round's shared side objective (same for both async opponents in a pair). Empty `objective_id` is reserved for future gating when no objective applies.
 Show the objective banner before combat replay — hold playback briefly so the player reads the briefing first.
-`damage_type` is always `"PHYSICAL"` today; elemental types land with server G2 (#28).
+`damage_type` on each event is `PHYSICAL` | `FIRE` | `ICE` | `POISON` | `LIGHTNING`.
+`status_applied` is non-empty on hits that apply a new status (`FIRE`, `ICE`, `POISON`, `STUN`); empty on failed lightning rolls.
+`stun_skipped` is true when a stunned weapon's cooldown fired but no shot was taken (no damage fields meaningful).
+`status_tick` is true for synthetic end-of-tick DoT events; `firing_item_id` is empty on those rows.
 `combat_log.summary` carries per-item match totals and `turning_point_tick` (the tick of the largest single `hp_loss` hit).
 `opponent_grid` is the ghost's public board (identity, dimensions, equipped items only).
 Bench, gold, and life values are stripped server-side - they are private to the ghost.
