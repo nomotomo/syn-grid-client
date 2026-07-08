@@ -245,12 +245,17 @@ Response:
     "player_id": "ghost-player-uuid",
     "grid_dimensions": { "columns": 4, "rows": 4 },
     "equipped_items": [ ...Item objects with placement_coords... ]
-  }
+  },
+  "objective_id": "clean-fight",
+  "objective_text": "Take fewer than 20 total damage.",
+  "bonus_triumph": 1
 }
 ```
 
 `status` values: `MATCH_STATUS_PLAYED`, `MATCH_STATUS_NO_OPPONENT`.
 `combat_log` and `opponent_grid` are populated only when status is `MATCH_STATUS_PLAYED`.
+`objective_id`, `objective_text`, and `bonus_triumph` announce the round's shared side objective (same for both async opponents in a pair). Empty `objective_id` is reserved for future gating when no objective applies.
+Show the objective banner before combat replay — hold playback briefly so the player reads the briefing first.
 `damage_type` is always `"PHYSICAL"` today; elemental types land with server G2 (#28).
 `combat_log.summary` carries per-item match totals and `turning_point_tick` (the tick of the largest single `hp_loss` hit).
 `opponent_grid` is the ghost's public board (identity, dimensions, equipped items only).
@@ -298,7 +303,8 @@ Response:
     "player_id": "player-uuid",
     "life_points": 4,
     "triumph_count": 3,
-    "eliminated": false
+    "eliminated": false,
+    "objective_met": true
   },
   "defender_state": { ... },
   "gold_rewarded": 0,
@@ -311,6 +317,7 @@ Response:
 The `round` field is used for match deduplication; finalizing the same round twice is rejected.
 The server persists `current_round = round + 1` on the caller's grid record.
 `gold_rewarded` is non-zero when a triumph milestone was crossed (e.g. 5th triumph).
+`attacker_state.objective_met` is `true` when this player met the round's shared side objective (bonus triumph already applied server-side).
 `attacker_state.eliminated = true` means life points reached 0 - trigger the game-over screen.
 `attacker_state.triumph_count >= 10` means victory - trigger the victory screen.
 
