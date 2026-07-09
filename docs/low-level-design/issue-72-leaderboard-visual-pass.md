@@ -30,8 +30,21 @@ brighter border).
 **No podium arrangement.** `_list_box` (`LeaderboardScene.gd:40`) is a single `VBoxContainer`; every row
 including ranks 1-3 is added sequentially via `_list_box.add_child(row)` (lines 103, 152). Ranks 1-3 get
 a taller row (88px, line 159) and a medallion, but they're still plain sequential list rows, not the
-raised/staggered 2nd-1st-3rd podium layout the Figma reference shows. This is the one real layout gap
-from the original scope.
+raised/staggered 2nd-1st-3rd podium layout the Figma reference shows.
+
+### Two more real gaps found on full re-comparison (beyond this issue's original scope)
+
+1. **Triumph is shown as a bare number, inconsistent with every other screen in the app.**
+   `LeaderboardScene.gd:210` - `triumph_label.text = str(triumph)`, no suffix. Figma shows `"T 9/10"`
+   (value/max). More importantly: this is inconsistent with the rest of the *real* app, not just Figma -
+   the HUD pill (post-#67) and Round Result both show Triumph as `"N/10"` against the real
+   `MAX_TRIUMPH = 10` constant (`RoundEndScene.gd`). Leaderboard is the odd one out today. This is worth
+   fixing regardless of the Figma comparison, since it's an internal consistency gap, not just a
+   stylistic mismatch.
+2. **No "YOU" text badge on the self row.** Confirmed by grep - no `"YOU"` string or equivalent anywhere
+   in `LeaderboardScene.gd`. The self row is only distinguished by the border color/row-height treatment
+   already noted above. Figma adds an explicit "YOU" label next to the player's own name. Minor, real,
+   cheap to add.
 
 ## Scope
 
@@ -41,6 +54,10 @@ from the original scope.
    This likely means splitting row-building into two paths: a new `HBoxContainer`-based podium row for
    ranks 1-3 (built once, not through the per-row loop), and the existing loop starting at rank 4.
 2. Leave `_make_rank_badge()`'s glow and the self-row emphasis untouched - both are already correct.
+3. Change `triumph_label.text` to `"%d/%d" % [triumph, MAX_TRIUMPH]` (or reference wherever `MAX_TRIUMPH`
+   should live if it's not already a shared constant accessible here - check `RoundEndScene.gd` for the
+   existing constant before adding a duplicate).
+4. Add a small "YOU" label next to the display name on the self row only (`is_self == true`).
 
 ## Files
 

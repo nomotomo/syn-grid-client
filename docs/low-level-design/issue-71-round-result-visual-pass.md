@@ -36,6 +36,44 @@ same function. Whoever picks up #71 should read #35 first and either do both tog
 sequence who touches `_configure_banner()` first, so they don't produce conflicting PRs on the same
 5 lines.
 
+### Architectural finding from a full top-to-bottom comparison (not just re-checking this issue's claims)
+
+**The real navigation order is the opposite of what Figma's mockup assumes, and this is not a styling
+question - it's confirmed by reading the actual scene-transition code.** `CombatReplayScene.gd:753`
+navigates to `BATTLE_REPORT_SCENE_PATH` after combat; `BattleReportScene.gd:70,223,227-228` navigates to
+`ROUND_END_SCENE_PATH` only after the report is skipped or all 5 pages are viewed. So the real flow is:
+
+```
+CombatReplay -> BattleReport (mandatory, 5 pages) -> RoundEnd (final screen)
+```
+
+Figma's mental model, reflected in the "VIEW REPORT" link added to its Round Result mockup during an
+earlier pass of this design review, treats Round Result as the primary landing screen with an *optional*
+deep-dive into the report. That's backwards from the real app, where the report is the mandatory middle
+step and Round End is the actual final screen. **Do not add a "VIEW REPORT" link from `RoundEndScene` to
+`BattleReportScene`** - by the time a player reaches `RoundEndScene`, they've already been through the
+report (or explicitly skipped it via the report's own Skip button, `BattleReportScene.gd:70`). Adding a
+link backward into a screen they already passed through (or chose to skip) doesn't match the real
+navigation graph. This is worth a note in the PR so nobody "fixes" this screen by copying that Figma
+element in.
+
+### Content/layout differences beyond the banner (found on full re-comparison)
+
+1. **LIFE and TRIUMPH are stacked vertically**, each with their own centered row. Figma shows them side
+   by side in a single top row (LIFE left-aligned, TRIUMPH right-aligned, same line). Confirm whether
+   this is worth changing - the current vertical stack may read more clearly on a narrow mobile frame
+   than Figma's side-by-side layout does, this is a layout call not an obvious bug.
+2. **Gold-earned is a separate "NEXT ROUND GRANT" block** near the bottom of the screen, not folded into
+   the headline subtitle. Figma shows `"ROUND 4 COMPLETE · +3 GOLD EARNED"` as one line right under the
+   headline. The current build shows `"ROUND 4 COMPLETE"` under the headline, then a separate labeled
+   `"NEXT ROUND GRANT / 12G"` block much further down. Different information architecture, not just
+   styling - flag for a call on which reads better, don't assume Figma's inline version is correct by
+   default.
+3. **A "MILESTONE +5G" line appears at the very bottom** of the current build with no Figma equivalent
+   visible in the reference screenshot - likely a separate bonus-trigger indicator. Confirm what triggers
+   it before touching it; may be working as intended and simply not something Figma's static mockup had
+   sample data for.
+
 ## Scope
 
 1. Add a glow treatment to `%Banner` - a pulsing outer glow for the win state (teal), consistent with
@@ -47,8 +85,13 @@ sequence who touches `_configure_banner()` first, so they don't produce conflict
    `_set_payout_display()`) as a small stat readout rather than plain text, if it isn't already - check
    `RoundEndScene.tscn` for its current node type before assuming it needs work.
 3. Continue/New Run buttons - confirm whether they already use `build_button_style()`/a themed style, or
-   need the same CTA-pill treatment discussed in #68 for the Main Menu Play button. If #68 lands a new
-   `build_cta_style()` or similar, reuse it here rather than inventing a second CTA treatment.
+   need the same CTA-pill treatment discussed in #68 for the Main Menu Play button. #68 landed
+   `ThemeBuilder.build_cta_style()` (merged) - reuse it here rather than inventing a second CTA treatment.
+4. Do NOT add a "VIEW REPORT" link to `BattleReportScene` - the real navigation order already routes
+   through the report before reaching this screen (see above). This is the one item from the original
+   Figma-derived scope that should be actively rejected, not just left as an open question.
+5. Raise the LIFE/TRIUMPH layout, gold-earned placement, and MILESTONE-line questions in the PR
+   description with a recommendation each - same pattern as the banner glow/desaturation question.
 
 ## Files
 
