@@ -18,10 +18,10 @@ const WEAPON_WEST_RECEPTOR: Array[Dictionary] = [
 ]
 
 const SAMPLE_BENCH_ITEMS: Array[Dictionary] = [
-	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null, "synergy_receptors": WEAPON_EAST_RECEPTOR},
+	{"item_id": "preview-1", "name": "Shortsword", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null, "synergy_receptors": WEAPON_EAST_RECEPTOR, "sell_price": 2},
 	{"item_id": "preview-2", "name": "Longbow", "item_type": "WEAPON", "weapon_category": "RANGED", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null, "synergy_receptors": WEAPON_WEST_RECEPTOR},
 	{"item_id": "preview-3", "name": "Arcane Staff", "item_type": "WEAPON", "weapon_category": "ARCANE", "level": 2, "dimensions": {"width": 1, "height": 1}, "placement_coords": null, "synergy_receptors": WEAPON_EAST_RECEPTOR},
-	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
+	{"item_id": "preview-4", "name": "Iron Buckler", "item_type": "ARMOR", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null, "sell_price": 2},
 	{"item_id": "preview-5", "name": "Healing Draught", "item_type": "POTION", "weapon_category": "", "level": 1, "dimensions": {"width": 1, "height": 1}, "placement_coords": null},
 	{"item_id": "preview-6", "name": "Hunting Spear", "item_type": "WEAPON", "weapon_category": "MELEE", "level": 2, "dimensions": {"width": 1, "height": 2}, "placement_coords": null},
 ]
@@ -136,6 +136,31 @@ func _run_offline_verify(screenshot_path: String) -> void:
 		else:
 			print("auto-verify: preview borders cleared after drag end")
 
+	# Recycler sell-price preview: hover a bench item over the recycler panel.
+	# preview-1/2/3 are on the grid after the synergy block; use preview-4 (still on bench).
+	var sell_drag_card := _bench_card_for_id("preview-4")
+	if sell_drag_card != null:
+		_simulate_mouse_button(MOUSE_BUTTON_LEFT, true)
+		_grid._on_card_drag_started(sell_drag_card)
+		var recycler_center: Vector2 = _grid.get_node("%RecyclerPanel").get_global_rect().get_center()
+		sell_drag_card.global_position = recycler_center - sell_drag_card.size / 2.0
+		for _i in 15:
+			await get_tree().process_frame
+		var label_text: String = _grid.get_node("%RecyclerLabel").text
+		print("auto-verify: recycler label mid-hover = '%s'" % label_text)
+		if not label_text.begins_with("SELL: +"):
+			push_error("auto-verify: expected recycler label to show a sell-price preview, got '%s'" % label_text)
+		_save_png(_sell_preview_path_for(screenshot_path))
+		_grid._on_card_drag_ended(sell_drag_card, recycler_center)
+		_simulate_mouse_button(MOUSE_BUTTON_LEFT, false)
+		for _i in 10:
+			await get_tree().process_frame
+		var reset_text: String = _grid.get_node("%RecyclerLabel").text
+		if reset_text.begins_with("SELL: +"):
+			push_error("auto-verify: recycler label must reset after drag end, still showing '%s'" % reset_text)
+	else:
+		push_error("auto-verify: no bench card for preview-4 (sell-price preview)")
+
 	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",
 			"direction": "EAST", "modifier_pct": 15.0},
@@ -159,6 +184,11 @@ func _confirmed_path_for(path: String) -> String:
 	if path.ends_with(".png"):
 		return path.substr(0, path.length() - 4) + "_confirmed.png"
 	return path + "_confirmed.png"
+
+func _sell_preview_path_for(path: String) -> String:
+	if path.ends_with(".png"):
+		return path.substr(0, path.length() - 4) + "_sell_preview.png"
+	return path + "_sell_preview.png"
 
 func _reset_harness_grid() -> void:
 	_grid.queue_free()
