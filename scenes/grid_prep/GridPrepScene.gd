@@ -27,6 +27,8 @@ const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatRepla
 @export var snap_particle_lifetime: float = 0.3
 @export var merge_particle_lifetime: float = 0.4
 @export var synergy_chime_stagger: float = 0.08
+@export var preview_intensity_scale: float = 0.5
+@export var merge_flash_stagger: float = 0.35
 @export var sell_shrink_duration: float = 0.15
 @export var pending_sell_alpha: float = 0.5
 @export var unaffordable_tint: Color = Color(0.45, 0.45, 0.5, 0.65)
@@ -49,10 +51,13 @@ const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatRepla
 @onready var _status_label: Label = %StatusLabel
 @onready var _hub_button: Button = %HubButton
 
+var _auto_arrange_button: Button = null
+
 var _cells: Array[GridCell] = []
 var _coord_labels: Array[Label] = []
 var _cards_by_item_id: Dictionary = {}
 var _synergy_borders: Array[SynergyBorder] = []
+var _preview_borders: Array[SynergyBorder] = []
 var _known_synergy_keys: Dictionary = {}
 
 var _dragging_card: ItemCard = null
@@ -82,6 +87,11 @@ func _ready() -> void:
 		SynGridPalette.DANGER, SynGridPalette.PANEL_BG_ELEVATED)
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
 	_shop_caption.text = "REQUISITION - ROUND %d - TAP TO BUY" % GameState.current_round
+
+	_auto_arrange_button = Button.new()
+	_auto_arrange_button.text = "AUTO"
+	_auto_arrange_button.pressed.connect(_on_auto_arrange_pressed)
+	add_child(_auto_arrange_button)
 
 	_apply_grid_dimensions_from_state()
 	_render_initial_state()
@@ -180,8 +190,15 @@ func _layout_screen() -> void:
 	_recycler_panel.size = Vector2(size.x - 48.0, recycler_height)
 
 	var start_top := recycler_top + recycler_height + section_gap
-	_start_match_button.position = Vector2(40.0, start_top)
-	_start_match_button.size = Vector2(size.x - 80.0, start_button_height)
+	var auto_width := 140.0
+	if _auto_arrange_button != null:
+		_auto_arrange_button.position = Vector2(40.0, start_top)
+		_auto_arrange_button.size = Vector2(auto_width, start_button_height)
+		_start_match_button.position = Vector2(40.0 + auto_width + 16.0, start_top)
+		_start_match_button.size = Vector2(size.x - 80.0 - auto_width - 16.0, start_button_height)
+	else:
+		_start_match_button.position = Vector2(40.0, start_top)
+		_start_match_button.size = Vector2(size.x - 80.0, start_button_height)
 
 func _apply_grid_dimensions_from_state() -> void:
 	grid_columns = GameState.grid_columns
@@ -348,6 +365,7 @@ func _spawn_card(item: Dictionary, parent: Node) -> ItemCard:
 	card.set_item_data(item)
 	card.drag_started.connect(_on_card_drag_started)
 	card.drag_ended.connect(_on_card_drag_ended)
+	_cards_by_item_id[item.get("item_id", "")] = card
 	return card
 
 # -- Round-start gold grant --
@@ -424,14 +442,7 @@ func _on_purchase_item_completed(data: Dictionary) -> void:
 	_purchase_in_flight = false
 	GameState.gold = int(data.get("new_balance", GameState.gold))
 	var bench: Array = data.get("updated_grid", {}).get("bench_reserve", [])
-
-	# Triple-merge detection: the server destroys three Level 1 copies and
-	# returns one unseen Level 2+ item in their place.
-	var merged_item: Dictionary = {}
-	for item: Dictionary in bench:
-		if int(item.get("level", 1)) >= 2 and not _known_bench_ids.has(item.get("item_id", "")):
-			merged_item = item
-			break
+	var merges: Array = data.get("merges", [])
 
 	GameState.sync_bench_from_server(bench)
 	GameState.sync_grid_dimensions(data.get("updated_grid", {}))
@@ -440,14 +451,14 @@ func _on_purchase_item_completed(data: Dictionary) -> void:
 	_stats_hud.refresh()
 	_update_affordability()
 
-	if not merged_item.is_empty():
-		AudioManager.play_triple_merge()
-		_celebrate_merge(merged_item)
+	if not merges.is_empty():
+		for i in merges.size():
+			var produced: Dictionary = merges[i].get("produced_item", {})
+			get_tree().create_timer(i * merge_flash_stagger).timeout.connect(
+				_celebrate_merge.bind(produced))
 	else:
 		AudioManager.play_grid_snap()
 		_status_label.text = "REQUISITIONED"
-	# Gold is spent whether or not the buy triggered a merge, so the coin-spend
-	# cue fires unconditionally after the merge/no-merge branch, not inside it.
 	AudioManager.play_coin_spend()
 
 func _on_purchase_item_failed(_code: int, reason: String) -> void:
@@ -455,11 +466,15 @@ func _on_purchase_item_failed(_code: int, reason: String) -> void:
 	_status_label.text = "PURCHASE FAILED - %s" % reason
 
 func _celebrate_merge(merged_item: Dictionary) -> void:
+	AudioManager.play_triple_merge()
 	_status_label.text = "TRIPLE-MERGE - LV%d %s" % [int(merged_item.get("level", 2)),
 		String(merged_item.get("name", "?")).to_upper()]
+	var tier_color := SynGridPalette.tint_for_tier(int(merged_item.get("level", 2)))
 	for card: ItemCard in _bench_row.get_children():
 		if card.get("_item_data").get("item_id", "") == merged_item.get("item_id", ""):
-			_spawn_merge_burst(card.get_global_rect().get_center())
+			var pos := card.get_global_rect().get_center()
+			_spawn_merge_burst(pos, tier_color)
+			_spawn_tier_ring(pos, tier_color)
 			return
 
 # -- Bench --
@@ -544,14 +559,20 @@ func _process(_delta: float) -> void:
 		_highlight_valid = valid
 		if anchor == null:
 			_clear_drop_highlight()
+			_clear_preview_synergy()
 		else:
 			_set_drop_highlight(anchor, item, valid)
+			if valid:
+				_refresh_preview_synergy(anchor, item)
+			else:
+				_clear_preview_synergy()
 	_recycler_panel.add_theme_stylebox_override("panel",
 		_recycler_hot_style if _recycler_panel.get_global_rect().has_point(center)
 		else _recycler_rest_style)
 
 func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 	_clear_drop_highlight()
+	_clear_preview_synergy()
 	_highlight_anchor = null
 	_highlight_valid = true
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
@@ -701,21 +722,46 @@ func _on_start_match_failed(_code: int, reason: String) -> void:
 # -- Placement (client-owned; see header comment) --
 
 func _place_card(card: ItemCard, cell: GridCell) -> void:
-	var item: Dictionary = card.get("_item_data")
 	_drag_layer.remove_child(card)
+	_finish_placement(card, cell, true)
+
+func _finish_placement(card: ItemCard, cell: GridCell, notify_server: bool) -> void:
+	var item: Dictionary = card.get("_item_data")
 	cell.add_child(card)
 	var footprint := GameState.item_footprint(item)
 	_apply_footprint_visual(card, footprint)
 	_claim_footprint(cell.grid_x, cell.grid_y, item.get("item_id", ""), footprint)
-
 	_move_item_to_equipped(item, cell.grid_x, cell.grid_y)
 	_cards_by_item_id[item.get("item_id", "")] = card
-
 	card.play_snap_bounce()
 	_spawn_snap_particles(cell, footprint)
 	AudioManager.play_grid_snap()
+	if notify_server:
+		_status_label.text = "placed %s at (%d, %d)" % [item.get("name", "?"), cell.grid_x, cell.grid_y]
+		_refresh_start_button()
+		ApiClient.validate_grid(GameState.to_grid_payload())
 
-	_status_label.text = "placed %s at (%d, %d)" % [item.get("name", "?"), cell.grid_x, cell.grid_y]
+func _on_auto_arrange_pressed() -> void:
+	var bench_snapshot: Array[Dictionary] = GameState.bench_items.duplicate()
+	for item in bench_snapshot:
+		var footprint := GameState.item_footprint(item)
+		var best_cell: GridCell = null
+		var best_score := -1.0
+		for cell in _cells:
+			if not _footprint_fits(cell.grid_x, cell.grid_y, item):
+				continue
+			var score := _score_cell_for_item(cell, footprint, item)
+			if score > best_score:
+				best_score = score
+				best_cell = cell
+		if best_cell == null:
+			continue
+		var card: ItemCard = _cards_by_item_id.get(item.get("item_id", ""))
+		if card == null:
+			continue
+		_bench_row.remove_child(card)
+		_finish_placement(card, best_cell, false)
+	_render_bench()
 	_refresh_start_button()
 	ApiClient.validate_grid(GameState.to_grid_payload())
 
@@ -775,15 +821,21 @@ func _spawn_snap_particles(cell: GridCell, footprint: Vector2i) -> void:
 	get_tree().create_timer(snap_particle_lifetime + 0.1).timeout.connect(particles.queue_free)
 
 # Rising chime + particle impact (juice contract section 5 SFX matrix).
-func _spawn_merge_burst(pos: Vector2) -> void:
+func _spawn_merge_burst(pos: Vector2, tint: Color) -> void:
 	var particles := _build_ring_particles(
 		60.0, 20.0, 32, merge_particle_lifetime,
-		60.0, 120.0, 5.0, Color(SynGridPalette.ACCENT_PURPLE, 0.9),
+		60.0, 120.0, 5.0, Color(tint, 0.9),
 		Color(SynGridPalette.ACCENT_TEAL, 0.0))
 	_drag_layer.add_child(particles)
 	particles.global_position = pos
 	particles.emitting = true
 	get_tree().create_timer(merge_particle_lifetime + 0.1).timeout.connect(particles.queue_free)
+
+func _spawn_tier_ring(pos: Vector2, tint: Color) -> void:
+	var ring := TierRing.new()
+	_drag_layer.add_child(ring)
+	ring.global_position = pos
+	ring.play(tint)
 
 func _build_ring_particles(ring_radius: float, inner_radius: float, amount: int,
 		lifetime: float, vel_min: float, vel_max: float, scale_max: float,
@@ -836,6 +888,7 @@ func _on_validate_grid_completed(data: Dictionary) -> void:
 		var pitch := 1.0 + float(fresh[i].get("modifier_pct", 0.2))
 		get_tree().create_timer(i * synergy_chime_stagger).timeout.connect(
 			AudioManager.play_synergy_link.bind(pitch))
+		_pulse_synergy_pair(fresh[i])
 
 	_status_label.text = "%d synergy link(s) active" % synergies.size()
 
@@ -849,6 +902,14 @@ func _synergy_key(synergy: Dictionary) -> String:
 		synergy.get("target_item_id", ""),
 		synergy.get("direction", ""),
 	]
+
+func _pulse_synergy_pair(synergy: Dictionary) -> void:
+	var source_card: ItemCard = _cards_by_item_id.get(synergy.get("source_item_id", ""))
+	var target_card: ItemCard = _cards_by_item_id.get(synergy.get("target_item_id", ""))
+	if source_card != null:
+		source_card.play_synergy_pulse()
+	if target_card != null:
+		target_card.play_synergy_pulse()
 
 func _clear_synergy_borders() -> void:
 	for border in _synergy_borders:
@@ -865,12 +926,19 @@ func _spawn_synergy_border(synergy: Dictionary) -> void:
 		return
 
 	var footprint := GameState.item_footprint(source_card.get("_item_data"))
-	var rect := _footprint_rect(source_cell, footprint)
 	var direction: String = synergy.get("direction", "")
+	var strip: SynergyBorder = SYNERGY_BORDER_SCENE.instantiate()
+	_synergy_layer.add_child(strip)
+	_position_strip_on_edge(strip, source_cell, footprint, direction)
+	strip.fade_in_to(float(synergy.get("modifier_pct", 0.2)))
+	_synergy_borders.append(strip)
+
+func _position_strip_on_edge(strip: SynergyBorder, anchor: GridCell, footprint: Vector2i,
+		direction: String) -> void:
+	var rect := _footprint_rect(anchor, footprint)
 	var half_strip := synergy_strip_width / 2.0
 	var strip_pos: Vector2
 	var strip_size: Vector2
-
 	match direction:
 		"EAST":
 			strip_pos = Vector2(rect.position.x + rect.size.x - half_strip, rect.position.y)
@@ -885,11 +953,88 @@ func _spawn_synergy_border(synergy: Dictionary) -> void:
 			strip_pos = Vector2(rect.position.x, rect.position.y - half_strip)
 			strip_size = Vector2(rect.size.x, synergy_strip_width)
 		_:
+			strip.queue_free()
 			return
-
-	var strip: SynergyBorder = SYNERGY_BORDER_SCENE.instantiate()
-	_synergy_layer.add_child(strip)
 	strip.global_position = strip_pos
 	strip.size = strip_size
-	strip.fade_in_to(float(synergy.get("modifier_pct", 0.2)))
-	_synergy_borders.append(strip)
+
+func _refresh_preview_synergy(anchor: GridCell, item: Dictionary) -> void:
+	_clear_preview_synergy()
+	var footprint := GameState.item_footprint(item)
+	for pair: Dictionary in _neighbors_of(anchor, footprint):
+		var neighbor_card: ItemCard = pair.cell.get_card()
+		if neighbor_card == null:
+			continue
+		var modifier := _synergy_match(item, neighbor_card.get("_item_data"), pair.direction)
+		if modifier <= 0.0:
+			continue
+		var strip: SynergyBorder = SYNERGY_BORDER_SCENE.instantiate()
+		_synergy_layer.add_child(strip)
+		_position_strip_on_edge(strip, anchor, footprint, pair.direction)
+		strip.fade_in_to(modifier * preview_intensity_scale)
+		_preview_borders.append(strip)
+
+func _clear_preview_synergy() -> void:
+	for border in _preview_borders:
+		border.fade_out_and_free()
+	_preview_borders.clear()
+
+func _synergy_match(item_a: Dictionary, item_b: Dictionary, dir_a_to_b: String) -> float:
+	var dir_b_to_a := _opposite_direction(dir_a_to_b)
+	var a_receptor := _matching_receptor(item_a, dir_a_to_b, String(item_b.get("item_type", "")))
+	var b_receptor := _matching_receptor(item_b, dir_b_to_a, String(item_a.get("item_type", "")))
+	return maxf(a_receptor, b_receptor)
+
+func _opposite_direction(dir: String) -> String:
+	match dir:
+		"NORTH": return "SOUTH"
+		"SOUTH": return "NORTH"
+		"EAST": return "WEST"
+		"WEST": return "EAST"
+		_: return ""
+
+func _matching_receptor(item: Dictionary, probe_dir: String, neighbor_type: String) -> float:
+	var receptors: Array = item.get("synergy_receptors", [])
+	var rotated: bool = item.get("rotated", false)
+	for r: Dictionary in receptors:
+		var effective_dir := String(r.get("direction", ""))
+		if rotated:
+			effective_dir = _rotate_dir_cw(effective_dir)
+		if effective_dir == probe_dir and String(r.get("accepts_type", "")) == neighbor_type:
+			return float(r.get("modifier_pct", 0.0))
+	return 0.0
+
+func _rotate_dir_cw(dir: String) -> String:
+	match dir:
+		"NORTH": return "EAST"
+		"EAST": return "SOUTH"
+		"SOUTH": return "WEST"
+		"WEST": return "NORTH"
+		_: return dir
+
+func _neighbors_of(anchor: GridCell, footprint: Vector2i) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for dx in footprint.x:
+		var north := _cell_at(anchor.grid_x + dx, anchor.grid_y - 1)
+		if north != null:
+			result.append({cell = north, direction = "NORTH"})
+		var south := _cell_at(anchor.grid_x + dx, anchor.grid_y + footprint.y)
+		if south != null:
+			result.append({cell = south, direction = "SOUTH"})
+	for dy in footprint.y:
+		var west := _cell_at(anchor.grid_x - 1, anchor.grid_y + dy)
+		if west != null:
+			result.append({cell = west, direction = "WEST"})
+		var east := _cell_at(anchor.grid_x + footprint.x, anchor.grid_y + dy)
+		if east != null:
+			result.append({cell = east, direction = "EAST"})
+	return result
+
+func _score_cell_for_item(anchor: GridCell, footprint: Vector2i, item: Dictionary) -> float:
+	var score := 0.0
+	for pair: Dictionary in _neighbors_of(anchor, footprint):
+		var neighbor_card: ItemCard = pair.cell.get_card()
+		if neighbor_card == null:
+			continue
+		score += _synergy_match(item, neighbor_card.get("_item_data"), pair.direction)
+	return score

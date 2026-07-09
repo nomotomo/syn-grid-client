@@ -52,6 +52,9 @@ signal drag_ended(card: ItemCard, drop_global_pos: Vector2)
 @export var snap_bounce_duration: float = 0.08
 @export var snap_settle_duration: float = 0.04
 
+# Synergy link pulse (issue #32).
+@export var synergy_pulse_duration: float = 0.20
+
 # Combat replay match-ending shatter (issue #28).
 @export var shatter_duration: float = 0.35
 
@@ -200,6 +203,15 @@ func play_snap_bounce() -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	_scale_tween.tween_property(self, "scale:y", 1.0, snap_settle_duration) \
 		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+
+func play_synergy_pulse() -> void:
+	_kill_scale_tween()
+	scale = Vector2.ONE
+	_scale_tween = create_tween()
+	_scale_tween.tween_property(self, "scale", Vector2(1.08, 1.08), synergy_pulse_duration / 2.0) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_scale_tween.tween_property(self, "scale", Vector2.ONE, synergy_pulse_duration / 2.0) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
 
 ## Combat-replay telemetry hook: parents a decoration (e.g. DamageMeter) inside
 ## the plain Content control, not the PanelContainer root. The root runs a
