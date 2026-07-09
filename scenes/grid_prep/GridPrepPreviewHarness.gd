@@ -161,6 +161,29 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	else:
 		push_error("auto-verify: no bench card for preview-4 (sell-price preview)")
 
+	# Recycler sell-price fallback: hovering a bench item with no sell_price must
+	# never show "SELL: +0G" - the label stays on its default text (§2.5 follow-up, issue #61).
+	var no_price_drag_card := _bench_card_for_id("preview-5")
+	if no_price_drag_card != null:
+		_simulate_mouse_button(MOUSE_BUTTON_LEFT, true)
+		_grid._on_card_drag_started(no_price_drag_card)
+		var recycler_center_2: Vector2 = _grid.get_node("%RecyclerPanel").get_global_rect().get_center()
+		no_price_drag_card.global_position = recycler_center_2 - no_price_drag_card.size / 2.0
+		for _i in 15:
+			await get_tree().process_frame
+		var fallback_text: String = _grid.get_node("%RecyclerLabel").text
+		print("auto-verify: recycler label mid-hover (no sell_price) = '%s'" % fallback_text)
+		if fallback_text.begins_with("SELL: +") or fallback_text != _grid._recycler_default_text:
+			push_error("auto-verify: recycler label must not invent a sell price when sell_price is absent, got '%s'" % fallback_text)
+		else:
+			print("auto-verify: recycler label correctly stayed on default text for no-sell_price item")
+		_grid._on_card_drag_ended(no_price_drag_card, recycler_center_2)
+		_simulate_mouse_button(MOUSE_BUTTON_LEFT, false)
+		for _i in 10:
+			await get_tree().process_frame
+	else:
+		push_error("auto-verify: no bench card for preview-5 (sell-price fallback)")
+
 	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",
 			"direction": "EAST", "modifier_pct": 15.0},
