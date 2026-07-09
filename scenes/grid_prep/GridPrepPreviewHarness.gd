@@ -105,11 +105,16 @@ func _run_offline_verify(screenshot_path: String) -> void:
 		await get_tree().process_frame
 
 	# Mid-drag screenshot: hover Arcane Staff west of Shortsword for preview strip.
+	# Start/end via the same direct scene-handler path `_auto_place_item_by_card`
+	# uses - do NOT mix that with simulated mouse-up. ItemCard._dragging is only
+	# set inside ItemCard._begin_drag(), so a simulated release + force_end_drag
+	# no-ops and leaves the card stuck mid-drag with a stale preview strip.
 	var drag_card := _bench_card_for_id("preview-3")
+	var hover_cell: GridCell = null
 	if drag_card != null:
 		_simulate_mouse_button(MOUSE_BUTTON_LEFT, true)
 		_grid._on_card_drag_started(drag_card)
-		var hover_cell: GridCell = _grid._cell_at(0, 1)
+		hover_cell = _grid._cell_at(0, 1)
 		drag_card.global_position = hover_cell.get_global_rect().get_center() - drag_card.size / 2.0
 		for _i in 25:
 			await get_tree().process_frame
@@ -120,10 +125,16 @@ func _run_offline_verify(screenshot_path: String) -> void:
 			push_error("auto-verify: expected preview synergy border mid-drag, got 0")
 		# Save the screenshot while the mouse is still held so the preview strip is visible.
 		_save_png(screenshot_path)
-		# Release so the harness can continue through the original validations.
+		# End the same way we started: direct scene-handler call (not simulated mouse-up).
+		_grid._on_card_drag_ended(drag_card, hover_cell.get_global_rect().get_center())
 		_simulate_mouse_button(MOUSE_BUTTON_LEFT, false)
-		for _i in 5:
+		for _i in 10:
 			await get_tree().process_frame
+		if _grid._preview_borders.size() != 0:
+			push_error("auto-verify: preview borders must clear after drag end (got %d)" %
+				_grid._preview_borders.size())
+		else:
+			print("auto-verify: preview borders cleared after drag end")
 
 	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",
@@ -138,7 +149,7 @@ func _run_offline_verify(screenshot_path: String) -> void:
 		_grid.grid_rows, _grid.grid_columns, _grid._layout_cell_size.y,
 		grid_bottom, bench_top, bench_top - grid_bottom])
 	print("auto-verify: %d synergy border(s) on screen" % _grid._synergy_borders.size())
-	print("auto-verify: %d preview border(s) mid-drag" % _grid._preview_borders.size())
+	print("auto-verify: %d preview border(s) after drag end" % _grid._preview_borders.size())
 	print("auto-verify: %d shop card(s) on screen" % _grid.get_node("%ShopRow").get_child_count())
 	# Keep the mid-drag screenshot as the primary artifact; also save a
 	# separate confirmed-synergy/layout artifact for regression coverage.
