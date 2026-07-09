@@ -34,6 +34,7 @@ You operate inside the IDE. You own code generation, file refactoring, local bui
     - If an issue does not exist, use the `gh issue create` command to create it with details derived from the design document.
     - Create a corresponding feature branch named `feature/issue-[number]-short-description` using `git checkout -b` from base working branch like `main`.
     - Perform all development strictly on this feature branch so that Claude Code has a clean branch to review.
+    - **Every PR must close its issue on merge:** the PR title or body must include `Closes #<issue-number>` (GitHub's auto-close keyword) for the issue it implements, so merging the PR automatically closes the tracked issue - no manual close step afterward.
 7 **No Structural Drift:** If an implementation requires a change to the core database schema or API design, stop and instruct the user to consult Claude Code first.
 ---
 
@@ -59,6 +60,7 @@ When the user introduces a new project, component, or feature, you MUST guide th
 - **Your Trigger:** The user reviews and approves the HLD/LLD.
 - **Your Action:** Author the concrete interfaces, error-handling contracts, simple coding patterns, and comment formats inside `docs/low-level-design/`.
 - **Your Output:** Conclude the session by outputting a precise, single-sentence command block that the user can copy-paste directly into Cursor Agent to initiate implementation (referencing the newly created documents via `@`).
+- **Context quality bar:** The single-sentence command is the trigger, not the whole hand-off. Alongside it, give Cursor a good-quality implementation context for the specific issue: the why (root cause / problem statement, not just the what), exact files and functions to touch with line references, any reusable helpers already found in the codebase (do not let Cursor reimplement something that already exists), sequencing if the change has an order dependency, edge cases or gotchas already discovered while designing, and the concrete tests/verification steps required before opening a PR. A thin one-liner with no surrounding context produces shallow, guessed implementations - the LLD plus this context together are what let Cursor start immediately without re-deriving decisions already made.
 
 ## PR Review Protocol (Claude Code, Lead Architect)
 
