@@ -46,6 +46,7 @@ const COMBAT_REPLAY_SCENE_PATH: String = "res://scenes/combat_replay/CombatRepla
 @onready var _bench_caption: Label = %BenchCaption
 @onready var _bench_row: HBoxContainer = %BenchRow
 @onready var _recycler_panel: PanelContainer = %RecyclerPanel
+@onready var _recycler_label: Label = %RecyclerLabel
 @onready var _start_match_button: Button = %StartMatchButton
 @onready var _drag_layer: Control = %DragLayer
 @onready var _status_label: Label = %StatusLabel
@@ -76,6 +77,7 @@ var _known_bench_ids: Dictionary = {}
 var _bench_dirty: bool = false
 var _recycler_rest_style: StyleBoxFlat
 var _recycler_hot_style: StyleBoxFlat
+var _recycler_default_text: String = ""
 var _layout_cell_size: Vector2 = Vector2(150, 150)
 
 func _ready() -> void:
@@ -86,6 +88,8 @@ func _ready() -> void:
 	_recycler_hot_style = ThemeBuilder.build_panel_style(
 		SynGridPalette.DANGER, SynGridPalette.PANEL_BG_ELEVATED)
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
+	_recycler_label.add_theme_color_override("font_color", SynGridPalette.TEXT_PRIMARY)
+	_recycler_default_text = _recycler_label.text
 	_shop_caption.text = "REQUISITION - ROUND %d - TAP TO BUY" % GameState.current_round
 
 	_auto_arrange_button = Button.new()
@@ -567,9 +571,23 @@ func _process(_delta: float) -> void:
 				_refresh_preview_synergy(anchor, item)
 			else:
 				_clear_preview_synergy()
+	var is_over_recycler := _recycler_panel.get_global_rect().has_point(center)
 	_recycler_panel.add_theme_stylebox_override("panel",
-		_recycler_hot_style if _recycler_panel.get_global_rect().has_point(center)
-		else _recycler_rest_style)
+		_recycler_hot_style if is_over_recycler else _recycler_rest_style)
+
+	if is_over_recycler and _dragging_origin == _bench_row:
+		var sell_price := int(item.get("sell_price", 0))
+		if sell_price > 0:
+			_recycler_label.text = "SELL: +%dG" % sell_price
+			_recycler_label.add_theme_color_override("font_color", SynGridPalette.GOLD)
+		else:
+			_reset_recycler_label()
+	else:
+		_reset_recycler_label()
+
+func _reset_recycler_label() -> void:
+	_recycler_label.text = _recycler_default_text
+	_recycler_label.add_theme_color_override("font_color", SynGridPalette.TEXT_PRIMARY)
 
 func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 	_clear_drop_highlight()
@@ -577,6 +595,7 @@ func _on_card_drag_ended(card: ItemCard, drop_pos: Vector2) -> void:
 	_highlight_anchor = null
 	_highlight_valid = true
 	_recycler_panel.add_theme_stylebox_override("panel", _recycler_rest_style)
+	_reset_recycler_label()
 
 	var origin := _dragging_origin
 	_dragging_card = null

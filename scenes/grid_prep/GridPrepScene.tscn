@@ -76,6 +76,7 @@ unique_name_in_owner = true
 mouse_filter = 2
 
 [node name="RecyclerLabel" type="Label" parent="RecyclerPanel"]
+unique_name_in_owner = true
 theme_type_variation = &"CaptionLabel"
 theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
