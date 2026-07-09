@@ -36,9 +36,14 @@ func _ready() -> void:
 	# generic cards. Each pill also carries a tooltip so a long-press /
 	# hover surfaces the resource's meaning (glass legal here per
 	# juice_manual.md section 1 - tooltips are non-live overlays).
-	for panel: PanelContainer in [_round_panel, _gold_panel, _life_panel, _triumph_panel]:
-		panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
-			SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED, true))
+	_round_panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+		SynGridPalette.ACCENT_SILVER, SynGridPalette.PANEL_BG_ELEVATED, true))
+	_gold_panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+		SynGridPalette.GOLD, SynGridPalette.PANEL_BG_ELEVATED, true))
+	_life_panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+		SynGridPalette.HP_HIGH, SynGridPalette.PANEL_BG_ELEVATED, true))
+	_triumph_panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+		SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED, true))
 	_round_panel.tooltip_text = "ROUND\nCurrent round of the season."
 	_gold_panel.tooltip_text = "GOLD\nSpent at the shop each round to buy items or refresh the roster."
 	_life_panel.tooltip_text = "LIFE\nEach lost match subtracts one life. Reach zero and the season resets."
@@ -55,9 +60,12 @@ func refresh() -> void:
 	_set_value(_round_value, str(GameState.current_round))
 	_set_value(_gold_value, str(GameState.gold))
 	_set_value(_life_value, str(GameState.life_points))
-	_life_value.add_theme_color_override("font_color",
-		SynGridPalette.HP_LOW if GameState.life_points <= life_low_threshold
-		else SynGridPalette.HP_HIGH)
+	var life_color := SynGridPalette.HP_LOW if GameState.life_points <= life_low_threshold \
+		else SynGridPalette.HP_HIGH
+	_life_value.add_theme_color_override("font_color", life_color)
+	_life_accent.color = life_color
+	_life_panel.add_theme_stylebox_override("panel", ThemeBuilder.build_capsule_style(
+		life_color, SynGridPalette.PANEL_BG_ELEVATED, true))
 	_set_value(_triumph_value, str(GameState.triumph_count))
 
 func _set_value(label: Label, new_text: String) -> void:
