@@ -985,7 +985,10 @@ func _refresh_preview_synergy(anchor: GridCell, item: Dictionary) -> void:
 		var strip: SynergyBorder = SYNERGY_BORDER_SCENE.instantiate()
 		_synergy_layer.add_child(strip)
 		_position_strip_on_edge(strip, anchor, footprint, pair.direction)
-		strip.fade_in_to(modifier * preview_intensity_scale)
+		# `glow_intensity` saturates quickly in the shader; use alpha to ensure
+		# preview links read visibly fainter than confirmed links.
+		strip.modulate.a = preview_intensity_scale
+		strip.fade_in_to(modifier)
 		_preview_borders.append(strip)
 
 func _clear_preview_synergy() -> void:

@@ -119,8 +119,11 @@ func _run_offline_verify(screenshot_path: String) -> void:
 		if preview_count <= 0:
 			push_error("auto-verify: expected preview synergy border mid-drag, got 0")
 		# Save the screenshot while the mouse is still held so the preview strip is visible.
-		_save_and_quit(screenshot_path)
-		return
+		_save_png(screenshot_path)
+		# Release so the harness can continue through the original validations.
+		_simulate_mouse_button(MOUSE_BUTTON_LEFT, false)
+		for _i in 5:
+			await get_tree().process_frame
 
 	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",
@@ -137,7 +140,14 @@ func _run_offline_verify(screenshot_path: String) -> void:
 	print("auto-verify: %d synergy border(s) on screen" % _grid._synergy_borders.size())
 	print("auto-verify: %d preview border(s) mid-drag" % _grid._preview_borders.size())
 	print("auto-verify: %d shop card(s) on screen" % _grid.get_node("%ShopRow").get_child_count())
-	_save_and_quit(screenshot_path)
+	# Keep the mid-drag screenshot as the primary artifact; also save a
+	# separate confirmed-synergy/layout artifact for regression coverage.
+	_save_and_quit(_confirmed_path_for(screenshot_path))
+
+func _confirmed_path_for(path: String) -> String:
+	if path.ends_with(".png"):
+		return path.substr(0, path.length() - 4) + "_confirmed.png"
+	return path + "_confirmed.png"
 
 func _reset_harness_grid() -> void:
 	_grid.queue_free()
@@ -390,15 +400,18 @@ func _auto_place(bench_idx: int, cell_coords: Vector2i) -> void:
 	_grid._on_card_drag_ended(card, cell.get_global_rect().get_center())
 
 func _save_and_quit(screenshot_path: String) -> void:
+	_save_png(screenshot_path)
+	await AudioManager.release_bgm_before_quit()
+	get_tree().quit()
+
+func _save_png(screenshot_path: String) -> void:
 	var tex := get_viewport().get_texture()
 	if tex != null:
 		var image := tex.get_image()
 		if image != null:
 			image.save_png(screenshot_path)
 			print("auto-verify: screenshot saved to ", screenshot_path)
-		else:
-			print("auto-verify: no image buffer (headless) - skipping screenshot")
-	else:
-		print("auto-verify: no viewport texture (headless) - skipping screenshot")
-	await AudioManager.release_bgm_before_quit()
-	get_tree().quit()
+			return
+		print("auto-verify: no image buffer (headless) - skipping screenshot")
+		return
+	print("auto-verify: no viewport texture (headless) - skipping screenshot")
