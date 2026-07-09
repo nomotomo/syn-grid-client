@@ -542,6 +542,9 @@ Item {
     armor_rating:    float
   }
   synergy_receptors: SynergyReceptor[]  (server-defined; client reads, never edits)
+  sell_price:        int     (server-computed payout if sold now; doubled at Level 2+;
+                               derived read-time value, never persisted server-side - the
+                               client must never compute this itself, only display it)
 }
 
 SynergyReceptor {
