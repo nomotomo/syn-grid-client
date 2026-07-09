@@ -4,6 +4,12 @@ This document is the authoritative client-side design contract.
 Every Godot scene, shader, tween, and audio node you generate must comply with every rule here.
 Do not invent alternatives. Do not soften requirements. Implement them exactly.
 
+Added 2026-07-10 (Figma design-pass reconciliation): `docs/design-tokens-neon-grimoire.md` is the
+companion doc for exact static visual values (hex colors, component recipes for HUD pills/aurora
+buttons/item-card glow, typography) extracted directly from the Figma Make reference. This manual
+stays authoritative for motion/audio; that doc is authoritative for color/shape/glow precision.
+Load both before any UI work that touches shared visual components.
+
 ---
 
 ## 1. UI Layout Paradigm
