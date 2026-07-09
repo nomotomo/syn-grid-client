@@ -14,3 +14,4 @@ Whenever the user asks you to implement a feature or fix a bug:
 3. Checkout a new branch: `git checkout -b feature/issue-[number]-[description]`.
 4. Only begin writing code *after* this branch is successfully created.
 5. When complete, push the branch to origin so it is visible for review.
+6. Commits must use the user's existing git identity only (Author and Committer from `git config`). Never set, override, or spoof author/committer. Never add `Co-authored-by:` (or any similar trailer) for Cursor, the agent, or any AI tool.
