@@ -61,6 +61,8 @@ func _ready() -> void:
 	GameState.grid_rows = grid_size
 	GameState.gold = 7
 	GameState.life_points = 4
+	if OS.get_environment("SYNGRID_LIFE") != "":
+		GameState.life_points = int(OS.get_environment("SYNGRID_LIFE"))
 	GameState.triumph_count = 2
 	GameState.bench_items = SAMPLE_BENCH_ITEMS.duplicate(true)
 	GameState.equipped_items = []
