@@ -113,9 +113,14 @@ func _run_offline_verify(screenshot_path: String) -> void:
 		drag_card.global_position = hover_cell.get_global_rect().get_center() - drag_card.size / 2.0
 		for _i in 25:
 			await get_tree().process_frame
+		var preview_count: int = _grid._preview_borders.size()
 		print("auto-verify: %d preview border(s) mid-drag (anchor=%s)" % [
-			_grid._preview_borders.size(), str(_grid._highlight_anchor)])
-		_simulate_mouse_button(MOUSE_BUTTON_LEFT, false)
+			preview_count, str(_grid._highlight_anchor)])
+		if preview_count <= 0:
+			push_error("auto-verify: expected preview synergy border mid-drag, got 0")
+		# Save the screenshot while the mouse is still held so the preview strip is visible.
+		_save_and_quit(screenshot_path)
+		return
 
 	_grid._on_validate_grid_completed(ApiClient.normalize_validate_grid_response({"synergies": [
 		{"source_item_id": "preview-1", "target_item_id": "preview-2",

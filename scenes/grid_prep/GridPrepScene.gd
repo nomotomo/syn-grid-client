@@ -92,6 +92,7 @@ func _ready() -> void:
 	_auto_arrange_button.text = "AUTO"
 	_auto_arrange_button.pressed.connect(_on_auto_arrange_pressed)
 	add_child(_auto_arrange_button)
+	_apply_auto_button_style()
 
 	_apply_grid_dimensions_from_state()
 	_render_initial_state()
@@ -685,6 +686,19 @@ func _apply_start_button_dim() -> void:
 	_start_match_button.remove_theme_stylebox_override("hover")
 	_start_match_button.remove_theme_stylebox_override("pressed")
 	_start_match_button.scale = Vector2.ONE
+
+func _apply_auto_button_style() -> void:
+	# Secondary action: styled like the rest of the UI, but visually distinct
+	# from the primary START MATCH teal glow.
+	var normal := ThemeBuilder.build_panel_style(
+		SynGridPalette.ACCENT_SILVER, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
+	var hover := ThemeBuilder.build_panel_style(
+		SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER, 0, true)
+	var pressed := ThemeBuilder.build_panel_style(
+		SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED, 0, true)
+	_auto_arrange_button.add_theme_stylebox_override("normal", normal)
+	_auto_arrange_button.add_theme_stylebox_override("hover", hover)
+	_auto_arrange_button.add_theme_stylebox_override("pressed", pressed)
 
 func _pop_start_button() -> void:
 	_start_match_button.pivot_offset = _start_match_button.size / 2.0
