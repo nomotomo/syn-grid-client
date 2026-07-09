@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/aurora_border.gdshader" id="4_aurora"]
 [ext_resource type="Shader" path="res://assets/shaders/crt_scanline.gdshader" id="5_crt"]
 [ext_resource type="Texture2D" path="res://assets/sprites/effects/dot.png" id="6_dust"]
+[ext_resource type="Script" path="res://scripts/ui/NavIcon.gd" id="7_navicon"]
 
 [sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
 shader = ExtResource("3_runes")
@@ -199,6 +200,40 @@ offset_bottom = 4.0
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
 
+; -- Daily/Codex quick-action tile row (issue #68 scope item 4). Daily's
+; red-dot badge stubs issue #40's daily-streak state (not yet built) as
+; permanently hidden; Codex is an entry-point tile only for issue #34's
+; Profile hub (not yet built) - neither tile navigates anywhere yet.
+[node name="QuickActionsRow" type="HBoxContainer" parent="Margin/Layout"]
+unique_name_in_owner = true
+theme_override_constants/separation = 16
+
+[node name="DailyTile" type="Button" parent="Margin/Layout/QuickActionsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "DAILY"
+
+[node name="DailyBadge" type="Panel" parent="Margin/Layout/QuickActionsRow/DailyTile"]
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+custom_minimum_size = Vector2(14, 14)
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -20.0
+offset_top = 8.0
+offset_right = -6.0
+offset_bottom = 22.0
+
+[node name="CodexTile" type="Button" parent="Margin/Layout/QuickActionsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "CODEX"
+
 [node name="LeaderboardButton" type="Button" parent="Margin/Layout"]
 unique_name_in_owner = true
 visible = false
@@ -285,11 +320,38 @@ mouse_filter = 1
 theme_override_constants/separation = 6
 alignment = 1
 
+; -- Each tab's own label text is set on the Button (used as the accessible
+; name and by MainMenu.gd's _style_active_tab), but rendered visually via the
+; TabContent child so an icon glyph (issue #68 scope item 5) can sit above it.
 [node name="HomeTab" type="Button" parent="BottomNav/TabRow"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 88)
 theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="TabContent" type="VBoxContainer" parent="BottomNav/TabRow/HomeTab"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="HomeIcon" type="Control" parent="BottomNav/TabRow/HomeTab/TabContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("7_navicon")
+shape = 0
+
+[node name="Label" type="Label" parent="BottomNav/TabRow/HomeTab/TabContent"]
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
 text = "HOME"
 
 [node name="LeaderboardTab" type="Button" parent="BottomNav/TabRow"]
@@ -297,6 +359,30 @@ unique_name_in_owner = true
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 88)
 theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="TabContent" type="VBoxContainer" parent="BottomNav/TabRow/LeaderboardTab"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="LeaderboardIcon" type="Control" parent="BottomNav/TabRow/LeaderboardTab/TabContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("7_navicon")
+shape = 1
+
+[node name="Label" type="Label" parent="BottomNav/TabRow/LeaderboardTab/TabContent"]
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
 text = "RANKS"
 
 [node name="SeasonTab" type="Button" parent="BottomNav/TabRow"]
@@ -304,6 +390,30 @@ unique_name_in_owner = true
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 88)
 theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="TabContent" type="VBoxContainer" parent="BottomNav/TabRow/SeasonTab"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="SeasonIcon" type="Control" parent="BottomNav/TabRow/SeasonTab/TabContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("7_navicon")
+shape = 2
+
+[node name="Label" type="Label" parent="BottomNav/TabRow/SeasonTab/TabContent"]
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
 text = "SEASON"
 
 [node name="ProfileTab" type="Button" parent="BottomNav/TabRow"]
@@ -311,4 +421,28 @@ unique_name_in_owner = true
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 88)
 theme_override_font_sizes/font_size = 14
+text = ""
+
+[node name="TabContent" type="VBoxContainer" parent="BottomNav/TabRow/ProfileTab"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="ProfileIcon" type="Control" parent="BottomNav/TabRow/ProfileTab/TabContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("7_navicon")
+shape = 3
+
+[node name="Label" type="Label" parent="BottomNav/TabRow/ProfileTab/TabContent"]
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
 text = "EDIT NAME"

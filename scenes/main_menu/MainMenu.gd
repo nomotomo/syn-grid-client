@@ -41,6 +41,11 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _season_rank: Label = %SeasonRank
 @onready var _season_countdown: Label = %SeasonCountdown
 @onready var _play_button: Button = %PlayButton
+@onready var _aurora_overlay: ColorRect = %PlayButton.get_node("AuroraOverlay")
+@onready var _quick_actions_row: HBoxContainer = %QuickActionsRow
+@onready var _daily_tile: Button = %DailyTile
+@onready var _daily_badge: Panel = %DailyBadge
+@onready var _codex_tile: Button = %CodexTile
 @onready var _leaderboard_button: Button = %LeaderboardButton
 @onready var _status_label: Label = %StatusLabel
 @onready var _home_tab: Button = %HomeTab
@@ -67,6 +72,37 @@ func _ready() -> void:
         _name_popover.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
                 SynGridPalette.BORDER_ACTIVE, Color(0.12, 0.12, 0.15, 0.88)))
 
+        # Issue #68: PlayButton needs its own full-pill style - the global Button
+        # theme's 12px radius (ThemeBuilder.build_button_style) barely rounds a
+        # 150px-tall button. build_cta_style over-specifies the radius so Godot
+        # clamps it to a true pill regardless of height.
+        _play_button.add_theme_stylebox_override("normal",
+                ThemeBuilder.build_cta_style(SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED))
+        _play_button.add_theme_stylebox_override("hover",
+                ThemeBuilder.build_cta_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER))
+        _play_button.add_theme_stylebox_override("pressed",
+                ThemeBuilder.build_cta_style(SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED))
+        _play_button.add_theme_stylebox_override("focus",
+                ThemeBuilder.build_cta_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER))
+        _play_button.add_theme_stylebox_override("disabled",
+                ThemeBuilder.build_cta_style(Color(0.30, 0.32, 0.35, 0.4), SynGridPalette.PANEL_BG, false))
+        # The aurora shader needs the overlay's actual pixel size to trace a
+        # rounded-rect rim matching the pill fill above - a canvas_item
+        # shader on a texture-less ColorRect has no built-in way to read its
+        # own rect size. Without this, the rim ignores corner_radius_px and
+        # renders a hard square corner over the now-rounded button.
+        _aurora_overlay.resized.connect(_update_aurora_rect_size)
+        _update_aurora_rect_size()
+
+        # Daily unclaimed-reward dot: issue #40 (daily streak/challenge state)
+        # hasn't landed yet, so this stays permanently hidden until that issue
+        # wires a real "has unclaimed reward" signal/field to flip it on.
+        var badge_style := StyleBoxFlat.new()
+        badge_style.bg_color = SynGridPalette.DANGER
+        badge_style.set_corner_radius_all(999)
+        _daily_badge.add_theme_stylebox_override("panel", badge_style)
+        _daily_badge.visible = false
+
         ApiClient.authenticate_completed.connect(_on_authenticate_completed)
         ApiClient.authenticate_failed.connect(_on_authenticate_failed)
         ApiClient.get_active_grid_completed.connect(_on_get_active_grid_completed)
@@ -79,6 +115,8 @@ func _ready() -> void:
         ApiClient.update_profile_failed.connect(_on_update_profile_failed)
 
         _play_button.pressed.connect(_on_play_pressed)
+        _daily_tile.pressed.connect(_on_daily_tile_pressed)
+        _codex_tile.pressed.connect(_on_codex_tile_pressed)
         _leaderboard_button.pressed.connect(_on_leaderboard_pressed)
         _home_tab.pressed.connect(_on_home_tab_pressed)
         _leaderboard_tab.pressed.connect(_on_leaderboard_pressed)
@@ -282,12 +320,22 @@ func _on_leaderboard_pressed() -> void:
         await _pulse(_leaderboard_button).finished
         get_tree().change_scene_to_file(LEADERBOARD_SCENE_PATH)
 
+# Entry points only (issue #68 scope item 4) - Daily ties to #40 (retention
+# pack) and Codex ties to #34 (Profile hub), neither of which is built yet.
+func _on_daily_tile_pressed() -> void:
+        _pulse(_daily_tile)
+        _set_status("DAILY REWARDS COMING SOON")
+
+func _on_codex_tile_pressed() -> void:
+        _pulse(_codex_tile)
+        _set_status("CODEX COMING SOON")
+
 # -- Juice helpers (contract section 2) --
 
 # Bento reveal: every panel pops in with the shop-card cascade rhythm.
 func _play_entry_cascade() -> void:
         var panels: Array[Control] = [_title_block, _player_card, _stats_hud,
-                _season_card, _play_button, _leaderboard_button]
+                _season_card, _play_button, _quick_actions_row, _leaderboard_button]
         for panel in panels:
                 panel.scale = Vector2.ZERO
         # One frame so container layout assigns sizes; pivots must be centred or
@@ -307,6 +355,11 @@ func _play_panel_pop(panel: Control, stagger_idx: int) -> void:
                 .set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
         tw.tween_property(panel, "scale", Vector2.ONE, entry_settle_duration) \
                 .set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_BACK)
+
+func _update_aurora_rect_size() -> void:
+        var mat: ShaderMaterial = _aurora_overlay.material
+        if mat != null:
+                mat.set_shader_parameter("rect_size", _aurora_overlay.size)
 
 func _pulse(control: Control) -> Tween:
         control.pivot_offset = control.size / 2.0
@@ -333,7 +386,10 @@ func _on_profile_tab_pressed() -> void:
         _open_name_popover()
 
 # Highlight the active tab with a teal border + tinted text; dim the rest.
-# Called on scene enter and whenever the player taps back to Home.
+# Called on scene enter and whenever the player taps back to Home. Tab labels
+# render via a TabContent/Label child (not the Button's own text - that's
+# left empty so the icon glyph above it has room), so both the label and the
+# NavIcon glyph get tinted here alongside the button's own colors.
 func _style_active_tab(active: Button) -> void:
         for tab: Button in [_home_tab, _leaderboard_tab, _season_tab, _profile_tab]:
                 var is_active := tab == active
@@ -344,6 +400,11 @@ func _style_active_tab(active: Button) -> void:
                 var text_color := SynGridPalette.ACCENT_TEAL if is_active else SynGridPalette.TEXT_DIM
                 tab.add_theme_color_override("font_color", text_color)
                 tab.add_theme_color_override("font_hover_color", text_color)
+                var tab_content: VBoxContainer = tab.get_node("TabContent")
+                var label: Label = tab_content.get_node("Label")
+                label.add_theme_color_override("font_color", text_color)
+                var icon: NavIcon = tab_content.get_child(0)
+                icon.set_glyph_color(text_color)
 
 func _set_status(text: String) -> void:
         _status_label.text = text

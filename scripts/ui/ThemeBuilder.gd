@@ -31,6 +31,14 @@ const BUTTON_CORNER_RADIUS: int = 12
 const BUTTON_CONTENT_MARGIN_X: float = 18.0
 const BUTTON_CONTENT_MARGIN_Y: float = 12.0
 
+# Primary CTA pill (Play/"Enter the Grid" and any future full-height primary
+# action button). Over-specified like CAPSULE_CORNER_RADIUS so Godot clamps
+# it to min(width, height)/2 - stays a true pill at any button height instead
+# of needing a hand-computed radius per instance.
+const CTA_CORNER_RADIUS: int = 999
+const CTA_CONTENT_MARGIN_X: float = 48.0
+const CTA_CONTENT_MARGIN_Y: float = 16.0
+
 # Label type variations (name -> [font_size, color]).
 const LABEL_VARIATIONS: Dictionary = {
         "CardNameLabel":  [12, SynGridPalette.TEXT_PRIMARY],
@@ -111,6 +119,27 @@ static func build_button_style(border_color: Color, bg_color: Color,
         elif shadow_size > 0:
                 style.shadow_size = shadow_size
                 style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+        return style
+
+# CTA pill (used by PlayButton and other tall primary actions): same
+# corner-radius-clamping trick as build_capsule_style, but with the wider
+# horizontal/vertical padding a tall hero button needs. Kept separate from
+# build_button_style so ordinary buttons keep their 12px card-like radius.
+static func build_cta_style(border_color: Color, bg_color: Color,
+                with_glow: bool = true) -> StyleBoxFlat:
+        var style := StyleBoxFlat.new()
+        style.bg_color = bg_color
+        style.border_color = border_color
+        style.set_border_width_all(PANEL_BORDER_WIDTH)
+        style.set_corner_radius_all(CTA_CORNER_RADIUS)
+        style.content_margin_left = CTA_CONTENT_MARGIN_X
+        style.content_margin_right = CTA_CONTENT_MARGIN_X
+        style.content_margin_top = CTA_CONTENT_MARGIN_Y
+        style.content_margin_bottom = CTA_CONTENT_MARGIN_Y
+        if with_glow:
+                style.shadow_color = border_color
+                style.shadow_color.a = 0.4
+                style.shadow_size = PANEL_GLOW_MARGIN + 2
         return style
 
 static func _build_theme() -> Theme:
