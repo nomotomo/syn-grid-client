@@ -18,13 +18,23 @@ uniform vec3 tint = vec3(1.0, 1.0, 1.0);
 // Neon glow halo (added post-#79 design review: this shader was attached to
 // the wordmark but only ever did chromatic-fringe + scanlines - a different,
 // much subtler effect than a glow, which is why the label never visibly
-// glowed despite having a material assigned). Self-contained multi-tap blur
-// of the glyph alpha mask, composited as a soft colored halo behind the
+// glowed despite having a material assigned). Self-contained multi-radius
+// blur of the glyph alpha mask, composited as a soft colored halo behind the
 // sharp text - deliberately NOT a project-wide Glow/Bloom Environment, since
 // this is 2D Control UI, not 3D world rendering, and a local canvas_item
 // effect keeps the glow scoped to this one label.
+//
+// IMPORTANT: this material must be applied to a TextureRect displaying a
+// SubViewport's output (see TitleGlowContainer in MainMenu.tscn), NOT
+// directly on a Label. A Label's glyphs are packed into a shared font-atlas
+// texture, often with minimal padding between characters - offsetting UV to
+// sample "just outside this glyph" can land inside a *different* glyph's
+// atlas tile instead, which reads as glow-colored noise/corruption rather
+// than a clean halo. Rendering the label to its own isolated texture first
+// guarantees the space this shader samples around each letter is genuinely
+// empty transparent space, not another character's artwork.
 uniform vec3 glow_color : source_color = vec3(0.0, 0.96, 0.83);
-uniform float glow_radius : hint_range(0.0, 16.0) = 5.0;   // pixels
+uniform float glow_radius : hint_range(0.0, 16.0) = 5.0;   // pixels, outermost ring
 uniform float glow_strength : hint_range(0.0, 3.0) = 1.5;
 
 void fragment() {
@@ -46,15 +56,26 @@ void fragment() {
 	float scan = sin(UV.y * scanline_frequency) * 0.5 + 0.5;
 	sharp_color *= 1.0 - scanline_intensity * (1.0 - scan);
 
-	// 12-tap radial blur of the alpha mask builds the outer glow halo.
+	// Multi-radius blur of the alpha mask builds a smooth falloff halo, not a
+	// hard ring at one fixed distance (a single-radius ring reads as a
+	// blotchy "donut" with nothing between the glyph edge and the ring, and
+	// nothing beyond it - real glow fades continuously).
 	float glow_alpha = 0.0;
-	const int TAPS = 12;
-	for (int i = 0; i < TAPS; i++) {
-		float angle = float(i) / float(TAPS) * 6.28318530718;
-		vec2 offset = vec2(cos(angle), sin(angle)) * glow_radius * TEXTURE_PIXEL_SIZE;
-		glow_alpha += texture(TEXTURE, UV + offset).a;
+	float weight_sum = 0.0;
+	const int RINGS = 4;
+	const int TAPS_PER_RING = 8;
+	for (int ring = 1; ring <= RINGS; ring++) {
+		float r = glow_radius * float(ring) / float(RINGS);
+		// Linear falloff: inner rings contribute more than outer rings.
+		float ring_weight = 1.0 - float(ring - 1) / float(RINGS);
+		for (int i = 0; i < TAPS_PER_RING; i++) {
+			float angle = float(i) / float(TAPS_PER_RING) * 6.28318530718;
+			vec2 offset = vec2(cos(angle), sin(angle)) * r * TEXTURE_PIXEL_SIZE;
+			glow_alpha += texture(TEXTURE, UV + offset).a * ring_weight;
+			weight_sum += ring_weight;
+		}
 	}
-	glow_alpha = clamp((glow_alpha / float(TAPS)) * glow_strength, 0.0, 1.0);
+	glow_alpha = clamp((glow_alpha / weight_sum) * glow_strength, 0.0, 1.0);
 
 	// Composite: sharp chromatic text on top, glow halo bleeding out from
 	// behind it into currently-transparent glyph-adjacent pixels only.

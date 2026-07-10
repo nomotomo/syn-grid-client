@@ -41,8 +41,8 @@ shader_parameter/jitter_rate = 0.55
 shader_parameter/jitter_amount = 1.2
 shader_parameter/tint = Color(1.0, 1.0, 1.0, 1)
 shader_parameter/glow_color = Color(0.0, 0.96, 0.83, 1)
-shader_parameter/glow_radius = 8.0
-shader_parameter/glow_strength = 2.2
+shader_parameter/glow_radius = 3.0
+shader_parameter/glow_strength = 0.9
 
 [node name="MainMenu" type="Control"]
 anchor_right = 1.0
@@ -167,6 +167,12 @@ unique_name_in_owner = true
 theme_type_variation = &"CaptionLabel"
 text = "Dark-Fantasy · Auto-Battler"
 
+; -- Glow wordmark: a SubViewport-isolation attempt here regressed badly
+; (theme doesn't reliably propagate into a SubViewport's separate node tree -
+; the label rendered tiny, uncolored, and mispositioned). Reverted to
+; applying the shader directly to the Label with conservative glow
+; parameters instead - see crt_scanline.gdshader's multi-ring falloff, tuned
+; low enough that any residual font-atlas sampling artifacts stay minor.
 [node name="TitleLabel" type="Label" parent="Margin/Layout/TitleBlock"]
 material = SubResource("CrtMaterial")
 theme_type_variation = &"TitleLabel"
