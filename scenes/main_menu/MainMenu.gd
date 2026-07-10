@@ -37,7 +37,8 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _title_block: VBoxContainer = %TitleBlock
 @onready var _top_badge: PanelContainer = %TopBadge
 @onready var _top_badge_label: Label = %TopBadgeLabel
-@onready var _subtitle_label: Label = %SubtitleLabel
+@onready var _wordmark_top: Label = %WordmarkTop
+@onready var _wordmark_bottom: Label = %WordmarkBottom
 @onready var _bracket_label: Label = %BracketLabel
 @onready var _divider_line_left: ColorRect = %LineLeft
 @onready var _divider_line_right: ColorRect = %LineRight
@@ -84,7 +85,9 @@ var _popover_tween: Tween = null
 func _ready() -> void:
         theme = ThemeBuilder.get_theme()
         _background.color = SynGridPalette.PANEL_BG
-        _subtitle_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        # Hero wordmark: NEON teal, GRIMOIRE white (design LandingScreen).
+        _wordmark_top.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        _wordmark_bottom.add_theme_color_override("font_color", Color.WHITE)
         _season_rank.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
 
         # Issue #79: top status bar + logo badge/bracket + patch ticker + Play

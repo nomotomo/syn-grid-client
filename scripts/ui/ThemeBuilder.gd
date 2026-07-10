@@ -14,6 +14,16 @@ extends RefCounted
 #   L2 ELEVATED   - resting panels/cards/HUD pills          [used by "panel"]
 #   L3 HOVER      - hovered/focused/dragging                [used by hover/pressed]
 
+# Font system reconciled 2026-07-10 to the Figma Make design's 3-font model
+# (Design Mobile Game UI/src/index.css @theme): Orbitron for display (logo,
+# headings, buttons, tabs), Inter for body (descriptions, labels), JetBrains
+# Mono for technical text (numbers, IDs, version, tickers). All three are
+# variable fonts, so one file per family covers every weight via FontVariation.
+# syn_grid_pixel (Press Start 2P) is retained only as a legacy fallback while
+# screens are migrated - it is no longer the default.
+const DISPLAY_FONT_PATH: String = "res://assets/fonts/Orbitron.ttf"
+const BODY_FONT_PATH: String = "res://assets/fonts/Inter.ttf"
+const MONO_FONT_PATH: String = "res://assets/fonts/JetBrainsMono.ttf"
 const PIXEL_FONT_PATH: String = "res://assets/fonts/syn_grid_pixel.ttf"
 
 const DEFAULT_FONT_SIZE: int = 16
@@ -39,23 +49,57 @@ const CTA_CORNER_RADIUS: int = 999
 const CTA_CONTENT_MARGIN_X: float = 48.0
 const CTA_CONTENT_MARGIN_Y: float = 16.0
 
-# Label type variations (name -> [font_size, color]).
+# Label type variations (name -> [font_size, color, font_family, weight]),
+# font family/weight mapped to the design's rules (index.css @theme + per-
+# element fontFamily in the screen sources): Orbitron display for names/titles/
+# badges, JetBrains Mono for numbers/captions/IDs, Inter body for descriptions.
 const LABEL_VARIATIONS: Dictionary = {
-        "CardNameLabel":  [12, SynGridPalette.TEXT_PRIMARY],
-        "BadgeLabel":     [12, SynGridPalette.GOLD],
-        "CaptionLabel":   [12, SynGridPalette.TEXT_DIM],
-        "HudTitleLabel":  [12, SynGridPalette.TEXT_DIM],
-        "HudValueLabel":  [28, SynGridPalette.TEXT_PRIMARY],
-        "StatPipLabel":   [10, SynGridPalette.TEXT_DIM],
-        "TitleLabel":     [72, SynGridPalette.TEXT_PRIMARY],
+        "CardNameLabel":  [12, SynGridPalette.TEXT_PRIMARY, "display", 700],
+        "BadgeLabel":     [12, SynGridPalette.GOLD,         "mono",    700],
+        "CaptionLabel":   [12, SynGridPalette.TEXT_DIM,     "mono",    400],
+        "BodyLabel":      [12, SynGridPalette.TEXT_PRIMARY, "body",    400],
+        "HudTitleLabel":  [12, SynGridPalette.TEXT_DIM,     "display", 700],
+        "HudValueLabel":  [28, SynGridPalette.TEXT_PRIMARY, "mono",    700],
+        "StatPipLabel":   [10, SynGridPalette.TEXT_DIM,     "mono",    400],
+        "TitleLabel":     [72, SynGridPalette.TEXT_PRIMARY, "display", 900],
 }
 
 static var _cached_theme: Theme = null
+static var _font_cache: Dictionary = {}
 
 static func get_theme() -> Theme:
         if _cached_theme == null:
                 _cached_theme = _build_theme()
         return _cached_theme
+
+# One FontVariation per (family, weight), cached. Variable-font weight axis is
+# set via variation_opentype {"wght": N}. Exposed so scenes that build labels
+# in code (the logo's two Orbitron-900 lines, HUD number labels, etc.) can pull
+# the exact same font instances the theme uses, instead of re-loading TTFs.
+static func get_font(family: String, weight: int) -> FontVariation:
+        var key := "%s:%d" % [family, weight]
+        if _font_cache.has(key):
+                return _font_cache[key]
+        var path := MONO_FONT_PATH
+        match family:
+                "display": path = DISPLAY_FONT_PATH
+                "body": path = BODY_FONT_PATH
+                "mono": path = MONO_FONT_PATH
+        var fv := FontVariation.new()
+        if ResourceLoader.exists(path):
+                fv.base_font = load(path)
+        fv.variation_opentype = {"wght": weight}
+        _font_cache[key] = fv
+        return fv
+
+static func display_font(weight: int = 700) -> FontVariation:
+        return get_font("display", weight)
+
+static func body_font(weight: int = 400) -> FontVariation:
+        return get_font("body", weight)
+
+static func mono_font(weight: int = 400) -> FontVariation:
+        return get_font("mono", weight)
 
 # Shared rounded neon-glass panel look: flat opaque fill, thin border, optional
 # colored outer glow (HUD pills, item slots) or plain drop shadow (drag lift).
@@ -145,10 +189,10 @@ static func build_cta_style(border_color: Color, bg_color: Color,
 static func _build_theme() -> Theme:
         var theme := Theme.new()
 
-        # Pixel font activates automatically once sourced (juice_manual.md
-        # section 6) and dropped at PIXEL_FONT_PATH - no code change needed.
-        if ResourceLoader.exists(PIXEL_FONT_PATH):
-                theme.default_font = load(PIXEL_FONT_PATH)
+        # Default font is Inter (body) - the design's --font-body, used for the
+        # majority of generic UI text. Display (Orbitron) and mono (JetBrains)
+        # are applied via type variations below and via Button styling.
+        theme.default_font = body_font(400)
         theme.default_font_size = DEFAULT_FONT_SIZE
 
         # PanelContainer: L2 resting panels.
@@ -169,6 +213,9 @@ static func _build_theme() -> Theme:
                 build_button_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER, 0, true))
         theme.set_stylebox("disabled", "Button",
                 build_button_style(Color(0.30, 0.32, 0.35, 0.4), SynGridPalette.PANEL_BG))
+        # Buttons use the display font (Orbitron) per the design - AuroraButton
+        # and TabBar labels are both font-display/Orbitron bold.
+        theme.set_font("font", "Button", display_font(700))
         theme.set_color("font_color", "Button", SynGridPalette.TEXT_PRIMARY)
         theme.set_color("font_hover_color", "Button", SynGridPalette.TEXT_PRIMARY)
         theme.set_color("font_pressed_color", "Button", SynGridPalette.ACCENT_TEAL)
@@ -199,5 +246,6 @@ static func _build_theme() -> Theme:
                 theme.set_type_variation(variation_name, "Label")
                 theme.set_font_size("font_size", variation_name, spec[0])
                 theme.set_color("font_color", variation_name, spec[1])
+                theme.set_font("font", variation_name, get_font(spec[2], spec[3]))
 
         return theme
