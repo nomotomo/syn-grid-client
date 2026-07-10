@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
@@ -7,6 +7,9 @@
 [ext_resource type="Shader" path="res://assets/shaders/crt_scanline.gdshader" id="5_crt"]
 [ext_resource type="Texture2D" path="res://assets/sprites/effects/dot.png" id="6_dust"]
 [ext_resource type="Script" path="res://scripts/ui/NavIcon.gd" id="7_navicon"]
+[ext_resource type="Script" path="res://scripts/ui/GearIcon.gd" id="8_gearicon"]
+[ext_resource type="Script" path="res://scripts/ui/BoltIcon.gd" id="9_bolticon"]
+[ext_resource type="Script" path="res://scripts/ui/ScrollingTicker.gd" id="10_ticker"]
 
 [sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
 shader = ExtResource("3_runes")
@@ -84,9 +87,81 @@ theme_override_constants/margin_bottom = 140
 [node name="Layout" type="VBoxContainer" parent="Margin"]
 theme_override_constants/separation = 28
 
+; -- Top status bar (issue #79 scope item 1): version left, online status +
+; live clock + avatar + settings gear right. The avatar here duplicates
+; PlayerCard's initial-letter/hash-tint logic (MainMenu.gd _refresh_identity)
+; on a second, smaller node - PlayerCard itself is left untouched per the
+; LLD's "raise as a question, don't touch" guidance on its position.
+[node name="TopBar" type="HBoxContainer" parent="Margin/Layout"]
+unique_name_in_owner = true
+theme_override_constants/separation = 12
+
+[node name="VersionLabel" type="Label" parent="Margin/Layout/TopBar"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+size_flags_horizontal = 3
+text = "SYN-GRID v2.4.1"
+
+[node name="StatusRow" type="HBoxContainer" parent="Margin/Layout/TopBar"]
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="OnlineLabel" type="Label" parent="Margin/Layout/TopBar/StatusRow"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+vertical_alignment = 1
+text = "● ONLINE"
+
+[node name="ClockLabel" type="Label" parent="Margin/Layout/TopBar/StatusRow"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+vertical_alignment = 1
+text = "--:--"
+
+[node name="TopAvatarRect" type="ColorRect" parent="Margin/Layout/TopBar/StatusRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(32, 32)
+mouse_filter = 2
+color = Color(0, 0.96, 0.83, 0.22)
+
+[node name="TopAvatarInitial" type="Label" parent="Margin/Layout/TopBar/StatusRow/TopAvatarRect"]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "?"
+
+[node name="SettingsButton" type="Button" parent="Margin/Layout/TopBar/StatusRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 36)
+text = ""
+
+[node name="SettingsIcon" type="Control" parent="Margin/Layout/TopBar/StatusRow/SettingsButton"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_gearicon")
+
 [node name="TitleBlock" type="VBoxContainer" parent="Margin/Layout"]
 unique_name_in_owner = true
 theme_override_constants/separation = 8
+
+; -- "Dark-Fantasy · Auto-Battler" badge (issue #79 scope item 2) --
+[node name="TopBadge" type="PanelContainer" parent="Margin/Layout/TitleBlock"]
+unique_name_in_owner = true
+size_flags_horizontal = 4
+
+[node name="TopBadgeLabel" type="Label" parent="Margin/Layout/TitleBlock/TopBadge"]
+unique_name_in_owner = true
+theme_type_variation = &"CaptionLabel"
+text = "DARK-FANTASY · AUTO-BATTLER"
 
 [node name="TitleLabel" type="Label" parent="Margin/Layout/TitleBlock"]
 material = SubResource("CrtMaterial")
@@ -99,6 +174,12 @@ unique_name_in_owner = true
 theme_override_font_sizes/font_size = 18
 horizontal_alignment = 1
 text = "ASYMMETRIC ASYNC AUTO-BATTLER"
+
+; -- "[ SYN-GRID ]" bracket subtitle (issue #79 scope item 2) --
+[node name="BracketLabel" type="Label" parent="Margin/Layout/TitleBlock"]
+unique_name_in_owner = true
+horizontal_alignment = 1
+text = "[ SYN-GRID ]"
 
 [node name="PlayerCard" type="PanelContainer" parent="Margin/Layout"]
 unique_name_in_owner = true
@@ -183,7 +264,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 150)
 theme_override_font_sizes/font_size = 36
 disabled = true
-text = "LINKING..."
+text = ""
 
 [node name="AuroraOverlay" type="ColorRect" parent="Margin/Layout/PlayButton"]
 material = SubResource("AuroraMaterial")
@@ -199,6 +280,34 @@ offset_right = 4.0
 offset_bottom = 4.0
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
+
+; -- Icon+label content (issue #79 scope item 4: "⚡ PLAY" per Figma). The
+; Button's own .text stays empty - MainMenu.gd now writes state text
+; ("LINKING...", "ENTER THE GRID", etc.) to PlayLabel instead, so the bolt
+; icon can sit beside it rather than needing a font glyph the pixel font
+; likely doesn't have (same reasoning as NavIcon.gd's hand-drawn icons).
+[node name="PlayContent" type="HBoxContainer" parent="Margin/Layout/PlayButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="PlayBoltIcon" type="Control" parent="Margin/Layout/PlayButton/PlayContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 36)
+mouse_filter = 2
+script = ExtResource("9_bolticon")
+
+[node name="PlayLabel" type="Label" parent="Margin/Layout/PlayButton/PlayContent"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 36
+vertical_alignment = 1
+text = "LINKING..."
 
 ; -- Daily/Codex quick-action tile row (issue #68 scope item 4). Daily's
 ; red-dot badge stubs issue #40's daily-streak state (not yet built) as
@@ -233,6 +342,12 @@ custom_minimum_size = Vector2(0, 84)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
 text = "CODEX"
+
+; -- Scrolling patch-notes ticker (issue #79 scope item 3) --
+[node name="PatchTicker" type="Panel" parent="Margin/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+script = ExtResource("10_ticker")
 
 [node name="LeaderboardButton" type="Button" parent="Margin/Layout"]
 unique_name_in_owner = true
@@ -302,6 +417,13 @@ text = "CANCEL"
 [node name="SeasonTimer" type="Timer" parent="."]
 unique_name_in_owner = true
 wait_time = 1.0
+
+; -- Top-bar clock (issue #79): deliberately its own Timer, not shared with
+; SeasonTimer above - see MainMenu.gd _ready() for why. 30s is plenty for a
+; status-bar clock, no need for per-second precision.
+[node name="ClockTimer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 30.0
 
 ; -- Bottom nav tab bar (thumb-reachable, sits above safe-area gutter) --------
 [node name="BottomNav" type="PanelContainer" parent="."]

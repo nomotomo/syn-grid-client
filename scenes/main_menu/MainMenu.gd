@@ -27,8 +27,18 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @export var popover_close_duration: float = 0.12
 
 @onready var _background: ColorRect = %Background
+@onready var _top_bar: HBoxContainer = %TopBar
+@onready var _online_label: Label = %OnlineLabel
+@onready var _clock_label: Label = %ClockLabel
+@onready var _topbar_avatar_rect: ColorRect = %TopAvatarRect
+@onready var _topbar_avatar_initial: Label = %TopAvatarInitial
+@onready var _settings_button: Button = %SettingsButton
+@onready var _settings_icon: GearIcon = %SettingsIcon
 @onready var _title_block: VBoxContainer = %TitleBlock
+@onready var _top_badge: PanelContainer = %TopBadge
+@onready var _top_badge_label: Label = %TopBadgeLabel
 @onready var _subtitle_label: Label = %SubtitleLabel
+@onready var _bracket_label: Label = %BracketLabel
 @onready var _player_card: PanelContainer = %PlayerCard
 @onready var _avatar_rect: ColorRect = %AvatarRect
 @onready var _avatar_initial: Label = %AvatarInitial
@@ -42,10 +52,13 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _season_countdown: Label = %SeasonCountdown
 @onready var _play_button: Button = %PlayButton
 @onready var _aurora_overlay: ColorRect = %PlayButton.get_node("AuroraOverlay")
+@onready var _play_bolt_icon: BoltIcon = %PlayBoltIcon
+@onready var _play_label: Label = %PlayLabel
 @onready var _quick_actions_row: HBoxContainer = %QuickActionsRow
 @onready var _daily_tile: Button = %DailyTile
 @onready var _daily_badge: Panel = %DailyBadge
 @onready var _codex_tile: Button = %CodexTile
+@onready var _patch_ticker: ScrollingTicker = %PatchTicker
 @onready var _leaderboard_button: Button = %LeaderboardButton
 @onready var _status_label: Label = %StatusLabel
 @onready var _home_tab: Button = %HomeTab
@@ -58,6 +71,7 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _confirm_name_button: Button = %ConfirmNameButton
 @onready var _cancel_name_button: Button = %CancelNameButton
 @onready var _season_timer: Timer = %SeasonTimer
+@onready var _clock_timer: Timer = %ClockTimer
 
 var _authenticated: bool = false
 var _popover_tween: Tween = null
@@ -67,6 +81,41 @@ func _ready() -> void:
         _background.color = SynGridPalette.PANEL_BG
         _subtitle_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
         _season_rank.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+
+        # Issue #79: top status bar + logo badge/bracket + patch ticker + Play
+        # button icon. Purely additive presentation - no new data sources
+        # beyond what GameState/ApiClient already provide (identity, which
+        # _refresh_identity() now also mirrors onto the smaller top-bar avatar).
+        _online_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_TEAL)
+        _settings_icon.set_glyph_color(SynGridPalette.TEXT_DIM)
+        _settings_button.add_theme_stylebox_override("normal",
+                ThemeBuilder.build_button_style(SynGridPalette.BORDER_DIM, SynGridPalette.PANEL_BG_ELEVATED))
+        _settings_button.add_theme_stylebox_override("hover",
+                ThemeBuilder.build_button_style(SynGridPalette.BORDER_ACTIVE, SynGridPalette.PANEL_BG_HOVER, 0, true))
+        _settings_button.pressed.connect(_on_settings_pressed)
+
+        _top_badge.add_theme_stylebox_override("panel",
+                ThemeBuilder.build_capsule_style(SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED, false))
+        _top_badge_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_PURPLE)
+        _bracket_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_PURPLE)
+
+        # Static flavor lines only - no reference to GameState.season here, since
+        # season data hasn't arrived yet at _ready() time (ApiClient.get_active_
+        # season() fires later, from _on_authenticate_completed) and this ticker
+        # is never re-populated afterward. A dynamic season-name line would show
+        # a stale fallback on every load; keep this chrome-only like Figma's own
+        # ticker (generic announcements, not live player-specific state).
+        _patch_ticker.add_theme_stylebox_override("panel",
+                ThemeBuilder.build_panel_style(SynGridPalette.BORDER_DIM, Color(SynGridPalette.ACCENT_TEAL, 0.08)))
+        _patch_ticker.set_items([
+                "CHECK DAILY REWARDS",
+                "NEW SYNERGIES DISCOVERED EACH RUN",
+                "SEASON REWARDS COMING SOON",
+        ])
+
+        _play_bolt_icon.set_glyph_color(SynGridPalette.ACCENT_TEAL)
+
+        _update_clock()
         # Glass is permitted here: the callsign popover is an impermanent popover
         # with no live numeric values on it (contract section 1).
         _name_popover.add_theme_stylebox_override("panel", ThemeBuilder.build_panel_style(
@@ -129,6 +178,13 @@ func _ready() -> void:
         _name_edit.text_submitted.connect(func(_text: String) -> void: _on_confirm_name_pressed())
         _popover_backdrop.gui_input.connect(_on_backdrop_input)
         _season_timer.timeout.connect(_update_season_countdown)
+        # Deliberately NOT piggybacked on _season_timer: that timer only starts
+        # once season data loads and self-stops on "SEASON ENDED"/fetch failure
+        # (see _update_season_countdown), which would silently kill clock
+        # updates too in exactly those cases. The clock needs its own
+        # lifecycle, independent of season-fetch success or failure.
+        _clock_timer.timeout.connect(_update_clock)
+        _clock_timer.start()
 
         _refresh_identity()
         _stats_hud.refresh()
@@ -141,7 +197,7 @@ func _ready() -> void:
 func _begin_session() -> void:
         _set_status("LINKING TO GRID...")
         _play_button.disabled = true
-        _play_button.text = "LINKING..."
+        _play_label.text = "LINKING..."
         ApiClient.authenticate(GameState.get_or_create_device_id())
 
 func _on_authenticate_completed(data: Dictionary) -> void:
@@ -151,7 +207,7 @@ func _on_authenticate_completed(data: Dictionary) -> void:
         _refresh_identity()
         _set_status("SYNCING RUN STATE...")
         _play_button.disabled = true
-        _play_button.text = "SYNCING..."
+        _play_label.text = "SYNCING..."
         ApiClient.get_active_grid()
         ApiClient.get_profile()
         ApiClient.get_active_season()
@@ -175,7 +231,7 @@ func _on_get_active_grid_failed(code: int, _reason: String) -> void:
 
 func _enable_play() -> void:
         _play_button.disabled = false
-        _play_button.text = "ENTER THE GRID"
+        _play_label.text = "ENTER THE GRID"
         _leaderboard_button.disabled = false
         _play_panel_pop(_play_button, 0)
         _play_panel_pop(_leaderboard_button, 1)
@@ -184,7 +240,7 @@ func _on_authenticate_failed(code: int, reason: String) -> void:
         _authenticated = false
         _set_status("LINK FAILED - %s (%s)" % [reason, str(code)])
         _play_button.disabled = false
-        _play_button.text = "RETRY LINK"
+        _play_label.text = "RETRY LINK"
 
 # -- Profile --
 
@@ -204,11 +260,17 @@ func _refresh_identity() -> void:
                 _name_label.text = shown_name
                 _play_panel_pop(_name_label, 0)
         _player_id_label.text = GameState.player_id
-        _avatar_initial.text = shown_name.substr(0, 1).to_upper()
+        var initial := shown_name.substr(0, 1).to_upper()
         var tints: Array[Color] = [SynGridPalette.ACCENT_TEAL, SynGridPalette.ACCENT_PURPLE, SynGridPalette.GOLD]
         var tint: Color = tints[abs(hash(GameState.avatar_id + shown_name)) % tints.size()]
+        _avatar_initial.text = initial
         _avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
         _avatar_initial.add_theme_color_override("font_color", tint)
+        # Issue #79: same initial/tint mirrored onto the smaller top-bar avatar -
+        # PlayerCard stays the source of truth, this is presentation-only.
+        _topbar_avatar_initial.text = initial
+        _topbar_avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
+        _topbar_avatar_initial.add_theme_color_override("font_color", tint)
 
 # -- Season --
 
@@ -232,6 +294,14 @@ func _on_get_active_season_failed(code: int, _reason: String) -> void:
         _season_rank.text = "-"
         _season_countdown.text = ""
         _season_timer.stop()
+
+# Issue #79 top-bar clock - plain wall-clock time-of-day display, not a
+# countdown, so juice_manual.md's "no live decision clock" rule (which
+# targets urgency-implying countdowns, not informational chrome like a phone
+# status bar's clock) doesn't apply here.
+func _update_clock() -> void:
+        var t := Time.get_time_dict_from_system()
+        _clock_label.text = "%02d:%02d" % [t.hour, t.minute]
 
 func _update_season_countdown() -> void:
         var ends_at: int = int(GameState.season.get("ends_at_unix", 0))
@@ -330,12 +400,18 @@ func _on_codex_tile_pressed() -> void:
         _pulse(_codex_tile)
         _set_status("CODEX COMING SOON")
 
+# Entry point only, same as Daily/Codex above - no settings screen exists yet
+# and building one is out of issue #79's scope (top-bar layout only).
+func _on_settings_pressed() -> void:
+        _pulse(_settings_button)
+        _set_status("SETTINGS COMING SOON")
+
 # -- Juice helpers (contract section 2) --
 
 # Bento reveal: every panel pops in with the shop-card cascade rhythm.
 func _play_entry_cascade() -> void:
-        var panels: Array[Control] = [_title_block, _player_card, _stats_hud,
-                _season_card, _play_button, _quick_actions_row, _leaderboard_button]
+        var panels: Array[Control] = [_top_bar, _title_block, _player_card, _stats_hud,
+                _season_card, _play_button, _quick_actions_row, _patch_ticker, _leaderboard_button]
         for panel in panels:
                 panel.scale = Vector2.ZERO
         # One frame so container layout assigns sizes; pivots must be centred or
