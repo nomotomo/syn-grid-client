@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/StatsHud.tscn" id="2"]
@@ -10,6 +10,8 @@
 [ext_resource type="Script" path="res://scripts/ui/GearIcon.gd" id="8_gearicon"]
 [ext_resource type="Script" path="res://scripts/ui/BoltIcon.gd" id="9_bolticon"]
 [ext_resource type="Script" path="res://scripts/ui/ScrollingTicker.gd" id="10_ticker"]
+[ext_resource type="Script" path="res://scripts/ui/GiftIcon.gd" id="11_gifticon"]
+[ext_resource type="Script" path="res://scripts/ui/BookIcon.gd" id="12_bookicon"]
 
 [sub_resource type="ShaderMaterial" id="RuneFieldMaterial"]
 shader = ExtResource("3_runes")
@@ -38,6 +40,9 @@ shader_parameter/chromatic_shift = 1.8
 shader_parameter/jitter_rate = 0.55
 shader_parameter/jitter_amount = 1.2
 shader_parameter/tint = Color(1.0, 1.0, 1.0, 1)
+shader_parameter/glow_color = Color(0.0, 0.96, 0.83, 1)
+shader_parameter/glow_radius = 8.0
+shader_parameter/glow_strength = 2.2
 
 [node name="MainMenu" type="Control"]
 anchor_right = 1.0
@@ -118,11 +123,10 @@ theme_type_variation = &"CaptionLabel"
 vertical_alignment = 1
 text = "--:--"
 
-[node name="TopAvatarRect" type="ColorRect" parent="Margin/Layout/TopBar/StatusRow"]
+[node name="TopAvatarRect" type="Panel" parent="Margin/Layout/TopBar/StatusRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(32, 32)
 mouse_filter = 2
-color = Color(0, 0.96, 0.83, 0.22)
 
 [node name="TopAvatarInitial" type="Label" parent="Margin/Layout/TopBar/StatusRow/TopAvatarRect"]
 unique_name_in_owner = true
@@ -161,7 +165,7 @@ size_flags_horizontal = 4
 [node name="TopBadgeLabel" type="Label" parent="Margin/Layout/TitleBlock/TopBadge"]
 unique_name_in_owner = true
 theme_type_variation = &"CaptionLabel"
-text = "DARK-FANTASY · AUTO-BATTLER"
+text = "Dark-Fantasy · Auto-Battler"
 
 [node name="TitleLabel" type="Label" parent="Margin/Layout/TitleBlock"]
 material = SubResource("CrtMaterial")
@@ -181,17 +185,47 @@ unique_name_in_owner = true
 horizontal_alignment = 1
 text = "[ SYN-GRID ]"
 
+; -- Decorative divider (line-hexagon-line) between the logo and the next
+; section, matching the Figma reference. --
+[node name="DividerRow" type="HBoxContainer" parent="Margin/Layout/TitleBlock"]
+theme_override_constants/separation = 12
+
+[node name="LineLeft" type="ColorRect" parent="Margin/Layout/TitleBlock/DividerRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 1)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="DividerHex" type="Control" parent="Margin/Layout/TitleBlock/DividerRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(14, 14)
+script = ExtResource("7_navicon")
+shape = 0
+
+[node name="LineRight" type="ColorRect" parent="Margin/Layout/TitleBlock/DividerRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 1)
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+; -- Hidden per the Figma structural-alignment pass (issue #79): Figma's Main
+; Menu shows neither this identity card nor the HUD row below at this
+; position at all - it goes straight from the logo to the Season card. Kept
+; in the tree (not deleted) since this was an open product question in the
+; LLD, not a design-system fact - trivially reversible by flipping `visible`
+; back to true if the call was wrong. Identity is still reachable via the
+; Profile tab popover; stats are still shown on Grid Prep.
 [node name="PlayerCard" type="PanelContainer" parent="Margin/Layout"]
 unique_name_in_owner = true
+visible = false
 
 [node name="HBox" type="HBoxContainer" parent="Margin/Layout/PlayerCard"]
 theme_override_constants/separation = 24
 
-[node name="AvatarRect" type="ColorRect" parent="Margin/Layout/PlayerCard/HBox"]
+[node name="AvatarRect" type="Panel" parent="Margin/Layout/PlayerCard/HBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(110, 110)
 mouse_filter = 2
-color = Color(0, 0.96, 0.83, 0.22)
 
 [node name="AvatarInitial" type="Label" parent="Margin/Layout/PlayerCard/HBox/AvatarRect"]
 unique_name_in_owner = true
@@ -225,8 +259,10 @@ size_flags_vertical = 4
 theme_override_font_sizes/font_size = 20
 text = "EDIT"
 
+; -- Hidden alongside PlayerCard above - see that node's comment. --
 [node name="StatsHud" parent="Margin/Layout" instance=ExtResource("2")]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 116)
 
 [node name="SeasonCard" type="PanelContainer" parent="Margin/Layout"]
@@ -322,6 +358,32 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 84)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
+text = ""
+
+; -- Icon+label content (issue #79 follow-up: Figma shows a 🎁 emoji above the
+; label; this project's pixel font has no emoji glyphs, so a hand-drawn
+; GiftIcon takes its place, same convention as NavIcon/BoltIcon/GearIcon). --
+[node name="DailyContent" type="VBoxContainer" parent="Margin/Layout/QuickActionsRow/DailyTile"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="DailyIcon" type="Control" parent="Margin/Layout/QuickActionsRow/DailyTile/DailyContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 22)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("11_gifticon")
+
+[node name="DailyLabel" type="Label" parent="Margin/Layout/QuickActionsRow/DailyTile/DailyContent"]
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
 text = "DAILY"
 
 [node name="DailyBadge" type="Panel" parent="Margin/Layout/QuickActionsRow/DailyTile"]
@@ -341,6 +403,29 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 84)
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 16
+text = ""
+
+[node name="CodexContent" type="VBoxContainer" parent="Margin/Layout/QuickActionsRow/CodexTile"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="CodexIcon" type="Control" parent="Margin/Layout/QuickActionsRow/CodexTile/CodexContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 22)
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("12_bookicon")
+
+[node name="CodexLabel" type="Label" parent="Margin/Layout/QuickActionsRow/CodexTile/CodexContent"]
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
 text = "CODEX"
 
 ; -- Scrolling patch-notes ticker (issue #79 scope item 3) --

@@ -30,7 +30,7 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _top_bar: HBoxContainer = %TopBar
 @onready var _online_label: Label = %OnlineLabel
 @onready var _clock_label: Label = %ClockLabel
-@onready var _topbar_avatar_rect: ColorRect = %TopAvatarRect
+@onready var _topbar_avatar_rect: Panel = %TopAvatarRect
 @onready var _topbar_avatar_initial: Label = %TopAvatarInitial
 @onready var _settings_button: Button = %SettingsButton
 @onready var _settings_icon: GearIcon = %SettingsIcon
@@ -39,8 +39,11 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _top_badge_label: Label = %TopBadgeLabel
 @onready var _subtitle_label: Label = %SubtitleLabel
 @onready var _bracket_label: Label = %BracketLabel
+@onready var _divider_line_left: ColorRect = %LineLeft
+@onready var _divider_line_right: ColorRect = %LineRight
+@onready var _divider_hex: NavIcon = %DividerHex
 @onready var _player_card: PanelContainer = %PlayerCard
-@onready var _avatar_rect: ColorRect = %AvatarRect
+@onready var _avatar_rect: Panel = %AvatarRect
 @onready var _avatar_initial: Label = %AvatarInitial
 @onready var _name_label: Label = %NameLabel
 @onready var _player_id_label: Label = %PlayerIdLabel
@@ -56,8 +59,10 @@ const LEADERBOARD_SCENE_PATH: String = "res://scenes/leaderboard/LeaderboardScen
 @onready var _play_label: Label = %PlayLabel
 @onready var _quick_actions_row: HBoxContainer = %QuickActionsRow
 @onready var _daily_tile: Button = %DailyTile
+@onready var _daily_icon: GiftIcon = %DailyIcon
 @onready var _daily_badge: Panel = %DailyBadge
 @onready var _codex_tile: Button = %CodexTile
+@onready var _codex_icon: BookIcon = %CodexIcon
 @onready var _patch_ticker: ScrollingTicker = %PatchTicker
 @onready var _leaderboard_button: Button = %LeaderboardButton
 @onready var _status_label: Label = %StatusLabel
@@ -98,6 +103,11 @@ func _ready() -> void:
                 ThemeBuilder.build_capsule_style(SynGridPalette.ACCENT_PURPLE, SynGridPalette.PANEL_BG_ELEVATED, false))
         _top_badge_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_PURPLE)
         _bracket_label.add_theme_color_override("font_color", SynGridPalette.ACCENT_PURPLE)
+        _divider_line_left.color = SynGridPalette.BORDER_DIM
+        _divider_line_right.color = SynGridPalette.BORDER_DIM
+        _divider_hex.set_glyph_color(SynGridPalette.ACCENT_TEAL)
+        _daily_icon.set_glyph_color(SynGridPalette.ACCENT_AMBER)
+        _codex_icon.set_glyph_color(SynGridPalette.TEXT_DIM)
 
         # Static flavor lines only - no reference to GameState.season here, since
         # season data hasn't arrived yet at _ready() time (ApiClient.get_active_
@@ -264,13 +274,23 @@ func _refresh_identity() -> void:
         var tints: Array[Color] = [SynGridPalette.ACCENT_TEAL, SynGridPalette.ACCENT_PURPLE, SynGridPalette.GOLD]
         var tint: Color = tints[abs(hash(GameState.avatar_id + shown_name)) % tints.size()]
         _avatar_initial.text = initial
-        _avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
+        _set_avatar_tint(_avatar_rect, tint)
         _avatar_initial.add_theme_color_override("font_color", tint)
         # Issue #79: same initial/tint mirrored onto the smaller top-bar avatar -
         # PlayerCard stays the source of truth, this is presentation-only.
         _topbar_avatar_initial.text = initial
-        _topbar_avatar_rect.color = Color(tint.r, tint.g, tint.b, 0.22)
+        _set_avatar_tint(_topbar_avatar_rect, tint)
         _topbar_avatar_initial.add_theme_color_override("font_color", tint)
+
+# Circular avatar fill (issue #79 fix: these were plain ColorRects, which have
+# no corner radius and rendered as squares - Figma's avatars are circles).
+# A fresh StyleBoxFlat per call is fine here; this only runs on identity
+# refresh, not per-frame.
+func _set_avatar_tint(panel: Panel, tint: Color) -> void:
+        var style := StyleBoxFlat.new()
+        style.bg_color = Color(tint.r, tint.g, tint.b, 0.22)
+        style.set_corner_radius_all(999)
+        panel.add_theme_stylebox_override("panel", style)
 
 # -- Season --
 
@@ -410,7 +430,10 @@ func _on_settings_pressed() -> void:
 
 # Bento reveal: every panel pops in with the shop-card cascade rhythm.
 func _play_entry_cascade() -> void:
-        var panels: Array[Control] = [_top_bar, _title_block, _player_card, _stats_hud,
+        # _player_card and _stats_hud are hidden on this screen (issue #79) -
+        # left out of the cascade since animating a scale tween on an invisible
+        # node is pointless, even though harmless.
+        var panels: Array[Control] = [_top_bar, _title_block,
                 _season_card, _play_button, _quick_actions_row, _patch_ticker, _leaderboard_button]
         for panel in panels:
                 panel.scale = Vector2.ZERO
