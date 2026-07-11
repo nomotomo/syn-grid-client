@@ -1,0 +1,101 @@
+/**
+ * Neon Grimoire — global typography utilities
+ * Apply via class names; do not hardcode font-family in screens.
+ */
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Role presets */
+.text-display-hero {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: var(--text-hero);
+  letter-spacing: var(--tracking-logo);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.text-display-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.text-display-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.text-mono-stat {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
+}
+
+.text-mono-caption {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-normal);
+  color: var(--color-text-muted);
+}
+
+.text-body {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.text-body-muted {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* Bracket subtitle under wordmark: [ SYN-GRID ] */
+.text-bracket-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.4em;
+  color: var(--color-accent-secondary);
+}
+
+/* CRT chromatic aberration headline (LandingScreen wordmark) */
+.crt-logo {
+  animation: crt-flicker 3s ease-in-out infinite;
+}
+
+.text-glow-teal {
+  text-shadow:
+    var(--crt-shift) 0 0 var(--ng-teal),
+    calc(var(--crt-shift) * -1) 0 0 var(--ng-purple),
+    0 0 var(--crt-glow-radius) var(--ng-teal);
+}
+
+.text-glow-white {
+  text-shadow:
+    var(--crt-shift) 0 0 var(--ng-teal),
+    calc(var(--crt-shift) * -1) 0 0 var(--ng-purple),
+    0 0 var(--crt-glow-radius) var(--ng-white);
+}
+
+.text-glow-victory {
+  animation: victory-pulse 2s ease-in-out infinite;
+}

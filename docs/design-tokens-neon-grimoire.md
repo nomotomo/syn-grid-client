@@ -1,15 +1,14 @@
 # Neon Grimoire Design Tokens — extracted from Figma Make reference
 
-**Source of truth for exact visual values.** This doc supersedes eyeballing screenshots — every
-value below was pulled via computed-style inspection of the live Figma Make prototype (not
-estimated from a picture), so treat hex/px/timing values here as exact, not approximate.
+**Jul 2026 update: the design source itself is now vendored in this repo.**
+`docs/design-reference/figma-make/` holds the exported Figma Make source (see its README).
+For exact values, `docs/design-reference/figma-make/styles/tokens.css` supersedes this doc where they disagree - that file is the design's own token sheet, not an extraction.
+This doc remains useful as the Godot-side mapping (which `SynGridPalette.gd` constant corresponds to which design token) and for the reconciliation notes below.
 
 **Figma reference (design intent, browse for layout/composition):**
-`https://www.figma.com/make/qlGF5mCe7dWO5rPHmmi11t/Design-Mobile-Game-UI`
-Requires the team's Figma login to open — it's a Figma Make project, not a public file. The
-published `.figma.site` mirror of this project is **stale** (frozen at an early iteration) and
-should not be used as a reference until it's manually republished from Figma Make; don't trust it
-over this doc or the live edit link.
+`https://www.figma.com/make/qlGF5mCe7dWO5rPHmmi11t/Design-Mobile-Game-UI` (requires the team's Figma login).
+The published public mirror `https://surly-spout-45387130.figma.site/` was republished Jul 2026 and now matches the vendored export - it is no longer stale and is safe to browse as the rendered reference.
+Re-plan context and decisions: `docs/high-level-design/figma-alignment-replan-jul2026.md`.
 
 Cross-reference: `docs/juice_manual.md` (motion/audio contract — unchanged by this doc, this doc
 only adds static visual tokens that manual doesn't cover), `scripts/ui/SynGridPalette.gd` (already
@@ -36,11 +35,10 @@ additional colors beyond this list.
 | Panel background | `#1F1F26` | `31, 31, 38` | matches existing elevated-panel gray already referenced in `juice_manual.md` §1 | HUD pill fill, card fill |
 | Panel background (deeper) | `#141419` | `20, 20, 25` | matches `juice_manual.md` §1's base panel gray | Screen background |
 
-**Action item for whoever implements this:** two colors above (Gold/Amber and Danger/Life red)
-don't exactly match existing `SynGridPalette.gd` constants. Reconcile before writing code — either
-update the Figma reference to the existing hex (preferred, avoids a palette fork) or update
-`SynGridPalette.gd` if there's a reason the existing value was wrong. Do not ship two near-duplicate
-reds/golds in the same palette.
+**Resolved (Jul 2026 re-plan):** the exported `styles/tokens.css` shows `#FFB627` and `#D81E3D` are deliberate design primitives used consistently across every screen's glow recipes and tier rings.
+Decision: update `SynGridPalette.gd` (`GOLD`/`TIER_GOLD` to `#FFB627`, `DANGER` to `#D81E3D`) in one small PR before any Wave 7 visual-pass issue lands.
+Tracked as its own issue; see `docs/high-level-design/figma-alignment-replan-jul2026.md` for rationale.
+Do not ship two near-duplicate reds/golds in the same palette.
 
 ---
 

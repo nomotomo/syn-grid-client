@@ -1,0 +1,163 @@
+/**
+ * Neon Grimoire — design tokens
+ * Source: Figma Make preview (surly-spout-45387130.figma.site) + src/index.css @theme
+ *
+ * Three layers:
+ *   1. Primitive  — raw palette (never use directly in components)
+ *   2. Semantic   — role-based aliases (prefer these in UI)
+ *   3. Component  — recipes for pills, panels, CTA (utility classes reference these)
+ */
+
+:root {
+  /* ── 1. Primitives ───────────────────────────────────────────────────── */
+
+  /* Surfaces (darkest → lightest) */
+  --ng-void: #0a0a10;
+  --ng-bg: #141419;
+  --ng-panel: #1f1f26;
+  --ng-panel-hover: #2a2a33;
+  --ng-border: #2a2a33;
+  --ng-border-dim: rgba(0, 245, 212, 0.25);
+
+  /* Neon accents */
+  --ng-teal: #00f5d4;
+  --ng-purple: #7b2fbe;
+  --ng-amber: #ffb627;
+  --ng-silver: #c8cdd6;
+  --ng-crimson: #d81e3d;
+  --ng-white: #ffffff;
+
+  /* Tier / rarity ring colors */
+  --ng-tier-bronze: #c7804a;
+  --ng-tier-silver: #c8cdd6;
+  --ng-tier-gold: #ffb627;
+  --ng-tier-epic: #7b2fbe;
+
+  /* Text */
+  --ng-text-primary: #c8cdd6;
+  --ng-text-muted: rgba(200, 205, 214, 0.55);
+  --ng-text-faint: rgba(200, 205, 214, 0.27);
+
+  /* ── 2. Semantic aliases ─────────────────────────────────────────────── */
+
+  --color-background: var(--ng-bg);
+  --color-background-void: var(--ng-void);
+  --color-surface: var(--ng-panel);
+  --color-surface-elevated: var(--ng-panel-hover);
+  --color-border: var(--ng-border);
+  --color-border-active: rgba(0, 245, 212, 0.9);
+
+  --color-text: var(--ng-text-primary);
+  --color-text-muted: var(--ng-text-muted);
+  --color-text-faint: var(--ng-text-faint);
+
+  --color-accent: var(--ng-teal);
+  --color-accent-secondary: var(--ng-purple);
+  --color-warning: var(--ng-amber);
+  --color-danger: var(--ng-crimson);
+  --color-life: var(--ng-crimson);
+  --color-gold: var(--ng-amber);
+  --color-triumph: var(--ng-purple);
+
+  /* Stat pill accent presets (HUD) */
+  --pill-life: var(--ng-crimson);
+  --pill-gold: var(--ng-amber);
+  --pill-round: var(--ng-silver);
+  --pill-triumph: var(--ng-purple);
+
+  /* ── 3. Typography ───────────────────────────────────────────────────── */
+
+  --font-display: 'Orbitron', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Type scale (mobile game HUD) */
+  --text-xs: 0.625rem;   /* 10px — captions, tab labels */
+  --text-sm: 0.6875rem;  /* 11px — body small, teasers */
+  --text-base: 0.75rem;  /* 12px — default HUD label */
+  --text-md: 0.875rem;   /* 14px — secondary headings */
+  --text-lg: 1.25rem;    /* 20px — section titles */
+  --text-xl: 1.625rem;   /* 26px — screen headers */
+  --text-2xl: 2rem;      /* 32px — hub titles */
+  --text-hero: 3.25rem;  /* 52px — NEON GRIMOIRE wordmark */
+
+  /* Letter-spacing (em-based, matches Figma Make screens) */
+  --tracking-tight: 0.04em;
+  --tracking-normal: 0.1em;
+  --tracking-wide: 0.14em;
+  --tracking-wider: 0.15em;
+  --tracking-widest: 0.25em;
+  --tracking-logo: 0.12em;
+
+  /* ── 4. Spacing & radii ──────────────────────────────────────────────── */
+
+  --radius-sm: 0.4375rem;  /* 7px — chips, small badges */
+  --radius-md: 0.5rem;     /* 8px — item cards */
+  --radius-lg: 0.875rem;   /* 14px — quick-action tiles */
+  --radius-xl: 1rem;       /* 16px — season banner, modals */
+  --radius-pill: 999px;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.25rem;
+  --space-2xl: 1.5rem;
+
+  /* Mobile frame (preview shell in App.tsx) */
+  --frame-width: 390px;
+  --frame-height: 844px;
+  --frame-radius: 2.75rem;
+
+  /* ── 5. Glow & shadow recipes ──────────────────────────────────────── */
+
+  /* Outer neon glows (use with box-shadow) */
+  --glow-teal-sm: 0 0 8px rgba(0, 245, 212, 0.35);
+  --glow-teal-md: 0 0 16px rgba(0, 245, 212, 0.45);
+  --glow-teal-lg: 0 0 24px rgba(0, 245, 212, 0.55);
+
+  --glow-purple-sm: 0 0 8px rgba(123, 47, 190, 0.35);
+  --glow-purple-md: 0 0 16px rgba(123, 47, 190, 0.45);
+  --glow-purple-lg: 0 0 40px rgba(123, 47, 190, 0.4);
+
+  --glow-amber-sm: 0 0 8px rgba(255, 182, 39, 0.35);
+  --glow-crimson-sm: 0 0 8px rgba(216, 30, 61, 0.35);
+
+  /* HUD pill capsule (HUDPill recipe) */
+  --shadow-pill-ring: 0 0 0 1px;
+  --shadow-pill-inset: inset 0 1px 0;
+
+  /* Panel depth */
+  --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 0 40px rgba(123, 47, 190, 0.2), 0 24px 48px rgba(0, 0, 0, 0.53);
+
+  /* Aurora CTA halo (matches .aurora-btn::after blur radius) */
+  --aurora-halo-blur: 12px;
+  --aurora-rim-inset: -3px;
+  --aurora-halo-inset: -8px;
+  --aurora-cycle: 2.5s;
+
+  /* CRT wordmark chromatic fringe */
+  --crt-shift: 0.8px;
+  --crt-glow-radius: 20px;
+
+  /* ── 6. Motion ─────────────────────────────────────────────────────── */
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 0.18s;
+  --duration-normal: 0.22s;
+  --duration-slow: 2.5s;
+  --duration-ticker: 18s;
+  --duration-scan: 6s;
+
+  /* ── 7. Z-index stack ──────────────────────────────────────────────── */
+
+  --z-rune-field: 0;
+  --z-content: 10;
+  --z-scanline: 5;
+  --z-tab-bar: 10;
+  --z-modal-backdrop: 100;
+  --z-modal: 200;
+  --z-tooltip: 300;
+}

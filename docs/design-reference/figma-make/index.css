@@ -1,0 +1,97 @@
+/* Neon Grimoire — global design system entry point
+ * Tailwind v4 (@import 'tailwindcss') + CSS custom properties + utility classes.
+ * Screens/components should consume tokens/utilities — not hardcode hex values.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@import './styles/tokens.css';
+@import './styles/animations.css';
+@import './styles/reset.css';
+@import './styles/typography.css';
+@import './styles/effects.css';
+
+@import 'tailwindcss';
+
+/* ── Tailwind v4 theme bridge ──────────────────────────────────────────
+ * Maps design tokens → utility classes (bg-*, text-*, shadow-*, font-*, etc.)
+ * Example: bg-bg, text-teal, shadow-glow-teal-md, font-display, rounded-pill
+ */
+@theme inline {
+  /* Surfaces */
+  --color-void: var(--ng-void);
+  --color-bg: var(--ng-bg);
+  --color-panel: var(--ng-panel);
+  --color-panel-hover: var(--ng-panel-hover);
+  --color-border: var(--ng-border);
+
+  /* Accents */
+  --color-teal: var(--ng-teal);
+  --color-purple: var(--ng-purple);
+  --color-amber: var(--ng-amber);
+  --color-silver: var(--ng-silver);
+  --color-crimson: var(--ng-crimson);
+  --color-white: var(--ng-white);
+
+  /* Semantic text */
+  --color-text: var(--ng-text-primary);
+  --color-text-muted: var(--ng-text-muted);
+  --color-text-faint: var(--ng-text-faint);
+
+  /* Tier */
+  --color-tier-bronze: var(--ng-tier-bronze);
+  --color-tier-silver: var(--ng-tier-silver);
+  --color-tier-gold: var(--ng-tier-gold);
+  --color-tier-epic: var(--ng-tier-epic);
+
+  /* Typography families */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* Font sizes */
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-hero: var(--text-hero);
+
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  /* Glow shadows (use as shadow-glow-teal-md etc.) */
+  --shadow-glow-teal-sm: var(--glow-teal-sm);
+  --shadow-glow-teal-md: var(--glow-teal-md);
+  --shadow-glow-teal-lg: var(--glow-teal-lg);
+  --shadow-glow-purple-sm: var(--glow-purple-sm);
+  --shadow-glow-purple-md: var(--glow-purple-md);
+  --shadow-glow-amber-sm: var(--glow-amber-sm);
+  --shadow-glow-crimson-sm: var(--glow-crimson-sm);
+  --shadow-panel: var(--shadow-panel);
+  --shadow-modal: var(--shadow-modal);
+
+  /* Letter-spacing */
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-wider: var(--tracking-wider);
+  --tracking-widest: var(--tracking-widest);
+  --tracking-logo: var(--tracking-logo);
+
+  /* Animation */
+  --animate-aurora-orbit: aurora-orbit var(--aurora-cycle) linear infinite;
+  --animate-aurora-halo: aurora-halo var(--aurora-cycle) ease-in-out infinite;
+  --animate-crt-flicker: crt-flicker 3s ease-in-out infinite;
+  --animate-scan-line: scan-line var(--duration-scan) linear infinite;
+  --animate-ticker: ticker var(--duration-ticker) linear infinite;
+  --animate-victory-pulse: victory-pulse 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-modal-in: modal-in var(--duration-normal) ease-out forwards;
+}
